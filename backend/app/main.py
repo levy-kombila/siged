@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import admin, auth, classification, documents, search
+from app.api import admin, auth, classification, cron, documents, search
 from app.core.config import get_settings
 from app.core.database import SessionLocal, create_schema, get_engine, init_engine
 from app.services.bootstrap import seed
@@ -23,6 +23,9 @@ STATIC = Path(__file__).parent / "static"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    problems = get_settings().production_problems()
+    if problems:
+        raise RuntimeError("Configuration de production incomplète : " + " ; ".join(problems))
     init_engine()
     create_schema()
     with SessionLocal() as db:
@@ -60,7 +63,8 @@ async def business_error(_: Request, exc: BusinessError):
     return JSONResponse({"detail": exc.message, **exc.extra}, status_code=exc.status_code)
 
 
-for r in (auth.router, documents.router, search.router, classification.router, admin.router, admin.integrations):
+for r in (auth.router, documents.router, search.router, classification.router, admin.router, admin.integrations,
+          cron.router):
     app.include_router(r)
 
 

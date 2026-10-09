@@ -63,12 +63,21 @@ class LocalBackend(StorageBackend):
 class S3Backend(StorageBackend):
     def __init__(self):
         import boto3  # import paresseux
+        from botocore.config import Config
 
         s = get_settings()
         self.bucket = s.s3_bucket
+        cfg = Config(
+            s3={"addressing_style": s.s3_addressing_style},
+            # Les stockages compatibles S3 (Supabase, R2, MinIO anciens) refusent souvent
+            # les sommes de contrôle CRC32 ajoutées par défaut depuis boto3 1.36.
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+            retries={"max_attempts": 3, "mode": "standard"},
+        )
         self.client = boto3.client(
-            "s3", endpoint_url=s.s3_endpoint_url, aws_access_key_id=s.s3_access_key,
-            aws_secret_access_key=s.s3_secret_key, region_name=s.s3_region)
+            "s3", endpoint_url=s.s3_endpoint_url or None, aws_access_key_id=s.s3_access_key,
+            aws_secret_access_key=s.s3_secret_key, region_name=s.s3_region, config=cfg)
         try:
             self.client.head_bucket(Bucket=self.bucket)
         except Exception:

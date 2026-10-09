@@ -4,6 +4,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
@@ -26,6 +27,11 @@ def init_engine(url: str | None = None):
               "json_serializer": lambda o: json.dumps(o, ensure_ascii=False, default=str)}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
+    elif get_settings().serverless:
+        # Serverless : pas de pool local (chaque instance est éphémère) ; le pool est assuré
+        # côté fournisseur (Neon -pooler / Supabase Supavisor, PgBouncer en mode transaction),
+        # incompatible avec les requêtes préparées automatiques de psycopg 3.
+        kwargs.update(poolclass=NullPool, connect_args={"prepare_threshold": None})
     else:
         kwargs.update(pool_size=10, max_overflow=20)
     _engine = create_engine(url, **kwargs)

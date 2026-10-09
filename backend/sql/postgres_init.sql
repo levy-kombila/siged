@@ -17,13 +17,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_audit_no_update ON audit_logs;
-CREATE TRIGGER trg_audit_no_update BEFORE UPDATE OR DELETE ON audit_logs
-    FOR EACH ROW EXECUTE FUNCTION siged_audit_immutable();
-
-DROP TRIGGER IF EXISTS trg_audit_no_truncate ON audit_logs;
-CREATE TRIGGER trg_audit_no_truncate BEFORE TRUNCATE ON audit_logs
-    FOR EACH STATEMENT EXECUTE FUNCTION siged_audit_immutable();
+-- Création seulement si absents : aucun verrou exclusif lors des démarrages suivants
+-- (important en serverless, où chaque nouvelle instance exécute ce script).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_no_update') THEN
+        CREATE TRIGGER trg_audit_no_update BEFORE UPDATE OR DELETE ON audit_logs
+            FOR EACH ROW EXECUTE FUNCTION siged_audit_immutable();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_no_truncate') THEN
+        CREATE TRIGGER trg_audit_no_truncate BEFORE TRUNCATE ON audit_logs
+            FOR EACH STATEMENT EXECUTE FUNCTION siged_audit_immutable();
+    END IF;
+END
+$$;
 
 -- 4) Recommandation production : l'application se connecte avec un rôle
 --    qui n'a que INSERT/SELECT sur audit_logs :

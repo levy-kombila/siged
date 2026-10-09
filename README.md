@@ -46,6 +46,10 @@ Services : `nginx` (443, TLS 1.3), `api`, `worker` (OCR, intégrité, DUA, captu
 
 > ⚠️ Sauvegardez `SIGED_STORAGE_ENCRYPTION_KEY` hors du serveur : sans elle, les fichiers sont irrécupérables.
 
+## Déploiement gratuit sur Vercel
+
+Le dépôt est prêt pour Vercel (`index.py`, `requirements.txt`, `vercel.json` à la racine) avec Neon (PostgreSQL) et Supabase Storage (S3). Guide pas à pas et limites du mode serverless : [docs/deploiement_vercel.md](docs/deploiement_vercel.md).
+
 ## Tests
 
 ```bash
@@ -54,7 +58,7 @@ python -m pytest -q                                                    # SQLite
 SIGED_TEST_DATABASE_URL=postgresql+psycopg://user:pwd@localhost:5432/siged_test python -m pytest -q   # PostgreSQL
 ```
 
-71 tests, organisés par sprint (`tests/test_sprintN_*.py`). Les tests de conversion sont ignorés automatiquement si OCRmyPDF, Ghostscript ou LibreOffice sont absents.
+77 tests, organisés par sprint (`tests/test_sprintN_*.py`) + déploiement serverless (`tests/test_deploiement_vercel.py`). Les tests de conversion sont ignorés automatiquement si OCRmyPDF, Ghostscript ou LibreOffice sont absents.
 
 ## Arborescence
 
@@ -72,5 +76,6 @@ siged/
 │   ├── diagrammes/     sources Mermaid + PNG
 │   ├── captures/       captures d'écran
 │   └── openapi.json    contrat d'API
+├── index.py · requirements.txt · vercel.json   (déploiement Vercel)
 ├── docker-compose.yml  ·  .env.example  ·  Makefile  ·  .github/workflows/ci.yml
 ```

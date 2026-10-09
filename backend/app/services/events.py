@@ -56,7 +56,7 @@ def emit(db: Session, event: str, payload: dict, synchronous: bool = False) -> i
             continue
         headers = {"Content-Type": "application/json", "X-SIGED-Event": event,
                    "X-SIGED-Signature": sign(h.secret, body)}
-        if synchronous or _sender_override:
+        if synchronous or _sender_override or get_settings().serverless:
             _post(h.url, headers, body)
         else:
             threading.Thread(target=_post, args=(h.url, headers, body), daemon=True).start()
@@ -82,5 +82,8 @@ def send_email(to: list[str], subject: str, text: str) -> bool:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Envoi e-mail impossible : %s", exc)
 
-    threading.Thread(target=_send, daemon=True).start()
+    if s.serverless:
+        _send()  # pas de fil d'exécution survivant à la réponse en serverless
+    else:
+        threading.Thread(target=_send, daemon=True).start()
     return True
