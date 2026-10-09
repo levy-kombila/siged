@@ -1,0 +1,13 @@
+flowchart TD
+  A[Job quotidien 03:00] --> B{Document VALIDÉ<br/>et retention_until ≤ aujourd'hui ?}
+  B -- non --> Z[Rien à faire]
+  B -- oui --> C{Gel juridique ?}
+  C -- oui --> Z
+  C -- non --> D[Bordereau : liste des éligibles<br/>audit RETENTION_RUN dry_run]
+  D --> E{Auto-exécution activée<br/>ou confirmation archiviste ?}
+  E -- non --> F[Attente de validation<br/>de l'archiviste]
+  E -- oui --> G{Sort final}
+  G -- DESTROY --> H[Suppression physique de toutes les versions<br/>texte indexé effacé · statut ÉLIMINÉ<br/>certificat : empreintes détruites dans l'audit]
+  G -- ARCHIVE --> I[Statut ARCHIVÉ · versions figées<br/>export AIP OAIS disponible]
+  H --> W[Webhook document.destroyed]
+  I --> W2[Webhook document.archived]

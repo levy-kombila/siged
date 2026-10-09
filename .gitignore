@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+backend/data/
+*.db
+deploy/nginx/certs/
+.pytest_cache/

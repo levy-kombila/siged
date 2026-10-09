@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  actor C as Contributeur
+  participant API as API FastAPI
+  participant DB as PostgreSQL
+  participant ST as MinIO (chiffré)
+  participant BG as Tâche de fond
+  C->>API: POST /api/documents (fichier + fiche JSON)
+  API->>API: contrôle JWT + permission document:write
+  API->>API: réception en flux + SHA-256 à la volée + détection MIME
+  API->>DB: recherche de doublon (même empreinte)
+  API->>DB: classement auto, héritage DUA, cote DOC-AAAA-NNNNNN
+  API->>ST: écriture originals/{doc}/{version} chiffrée AES-256-GCM
+  API->>DB: document + version 1.0 + entrée d'audit chaînée (1 transaction)
+  API-->>C: 201 Created (fiche + empreinte)
+  API->>BG: traitement asynchrone
+  BG->>ST: lecture + déchiffrement
+  BG->>BG: OCRmyPDF / LibreOffice ⇒ PDF/A-2b + OCR
+  BG->>ST: écriture archival/{doc}/{version}.pdf chiffrée
+  BG->>DB: texte indexé (FTS), empreinte PDF/A, audit DOCUMENT_PROCESSED

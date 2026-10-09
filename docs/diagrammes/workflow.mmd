@@ -1,0 +1,11 @@
+stateDiagram-v2
+  direction TB
+  [*] --> Brouillon : dépôt v1.0
+  Brouillon --> En_validation : soumettre
+  En_validation --> Brouillon : rejeter (motif)
+  En_validation --> Validé : approuver
+  Validé --> Brouillon : nouvelle version v(n+1).0
+  Validé --> Archivé : DUA échue, ARCHIVE
+  Validé --> Éliminé : DUA échue, DESTROY
+  Archivé --> [*]
+  Éliminé --> [*]

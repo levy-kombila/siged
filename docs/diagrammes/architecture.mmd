@@ -1,0 +1,34 @@
+flowchart TB
+  subgraph Clients
+    U[Navigateur<br/>interface web SIGED]
+    ERP[ERP / SIRH<br/>clé d'API]
+    MAIL[Messagerie<br/>IMAP]
+    DIR[Dossier partagé<br/>hot folder]
+  end
+  subgraph DMZ
+    NG[Nginx<br/>TLS 1.3 · HSTS<br/>limitation de débit]
+  end
+  subgraph Application
+    API[API FastAPI<br/>x4 workers uvicorn<br/>JWT · RBAC · audit]
+    WK[Worker APScheduler<br/>OCR · intégrité · DUA<br/>capture dossier/mail]
+    CV[Chaîne de conversion<br/>OCRmyPDF · Tesseract<br/>LibreOffice · Ghostscript]
+  end
+  subgraph Données
+    PG[(PostgreSQL 16<br/>métadonnées · index FTS<br/>journal d'audit chaîné)]
+    S3[(MinIO / S3<br/>fichiers chiffrés<br/>AES-256-GCM)]
+    BK[(Sauvegardes<br/>quotidiennes)]
+  end
+  U -->|HTTPS| NG
+  ERP -->|HTTPS + X-API-Key| NG
+  NG --> API
+  MAIL --> WK
+  DIR --> WK
+  API --> CV
+  WK --> CV
+  API --> PG
+  API --> S3
+  WK --> PG
+  WK --> S3
+  API -.->|webhooks signés HMAC| ERP
+  PG --> BK
+  S3 --> BK

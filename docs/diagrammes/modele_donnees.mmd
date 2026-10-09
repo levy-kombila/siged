@@ -1,0 +1,93 @@
+erDiagram
+  ROLES ||--o{ USERS : attribue
+  ROLES ||--o{ API_KEYS : attribue
+  USERS ||--o{ DOCUMENTS : cree
+  CLASSIFICATION_NODES ||--o{ CLASSIFICATION_NODES : parent
+  CLASSIFICATION_NODES ||--o{ DOCUMENTS : classe
+  DOCUMENTS ||--|{ DOCUMENT_VERSIONS : versionne
+  DOCUMENTS ||--o{ DOCUMENT_METADATA : decrit
+  DOCUMENTS ||--o{ WORKFLOW_EVENTS : historise
+  DOCUMENTS ||--o{ AUDIT_LOGS : trace
+  ROLES {
+    int id PK
+    string name
+    json permissions
+  }
+  USERS {
+    int id PK
+    string username
+    string hashed_password
+    int role_id FK
+    int failed_logins
+    datetime locked_until
+  }
+  API_KEYS {
+    int id PK
+    string name
+    string key_prefix
+    string key_hash
+    int role_id FK
+  }
+  CLASSIFICATION_NODES {
+    int id PK
+    string code
+    string label
+    int parent_id FK
+    int default_dua_years
+    string default_final_disposition
+    json rule_doc_types
+    json rule_keywords
+  }
+  DOCUMENTS {
+    uuid id PK
+    string reference
+    string title
+    string author
+    date document_date
+    string doc_type
+    json keywords
+    int dua_years
+    string final_disposition
+    date retention_until
+    string status
+    bool legal_hold
+    int classification_id FK
+  }
+  DOCUMENT_VERSIONS {
+    uuid id PK
+    uuid document_id FK
+    int major
+    int minor
+    bool is_current
+    bool is_frozen
+    string sha256
+    string storage_key
+    string archival_format
+    string archival_sha256
+    string archival_storage_key
+    text extracted_text
+  }
+  DOCUMENT_METADATA {
+    int id PK
+    uuid document_id FK
+    string meta_key
+    text meta_value
+  }
+  WORKFLOW_EVENTS {
+    int id PK
+    uuid document_id FK
+    string from_status
+    string to_status
+    string actor_name
+    text comment
+  }
+  AUDIT_LOGS {
+    bigint id PK
+    datetime created_at
+    string actor
+    string action
+    string object_id
+    json details
+    string prev_hash
+    string entry_hash
+  }

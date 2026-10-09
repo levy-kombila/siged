@@ -1,0 +1,26 @@
+# --- API ---
+fastapi==0.143.0
+uvicorn[standard]==0.53.0
+python-multipart==0.0.32
+pydantic==2.13.5
+pydantic-settings==2.15.0
+email-validator==2.3.0
+# --- Base de données ---
+sqlalchemy==2.1.4
+psycopg[binary]==3.3.6
+# --- Sécurité ---
+bcrypt==5.0.0
+PyJWT==2.14.0
+cryptography==50.0.1
+# --- Stockage objet (MinIO / S3) ---
+boto3==1.43.110
+# --- Documents, PDF/A, OCR ---
+pypdf==5.9.0
+pypdfium2==5.13.0
+pytesseract==0.3.13
+pillow==12.3.0
+python-docx==1.2.0
+ocrmypdf==17.13.0
+# --- Interopérabilité & tâches planifiées ---
+httpx==0.28.1
+APScheduler==3.11.3

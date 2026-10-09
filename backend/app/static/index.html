@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIGED — Gestion électronique des documents</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Connexion -->
+  <section id="login-view" class="login hidden">
+    <form id="login-form" class="login-card">
+      <div class="brand"><span class="brand-mark">S</span><div><strong>SIGED</strong><small>Gestion électronique des documents &amp; archivage</small></div></div>
+      <label>Identifiant<input name="username" autocomplete="username" required></label>
+      <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit">Se connecter</button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </section>
+
+  <!-- Application -->
+  <div id="app" class="hidden">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">S</span><div><strong>SIGED</strong><small id="who"></small></div></div>
+      <nav id="nav">
+        <a data-view="dashboard">Tableau de bord</a>
+        <a data-view="search">Rechercher</a>
+        <a data-view="upload" data-perm="document:write">Déposer</a>
+        <a data-view="plan">Plan de classement</a>
+        <a data-view="compliance" data-perm="audit:read">Conformité</a>
+        <a data-view="integrations" data-perm="integration:manage">Interopérabilité</a>
+      </nav>
+      <button id="logout" class="btn ghost">Déconnexion</button>
+    </aside>
+    <main id="main"></main>
+  </div>
+
+  <dialog id="doc-dialog"><div id="doc-panel"></div></dialog>
+  <div id="toast" class="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
