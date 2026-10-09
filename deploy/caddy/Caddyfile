@@ -1,0 +1,35 @@
+# Frontal HTTPS de SIGED.
+# - SIGED_DOMAIN=localhost      -> certificat local auto-signé (tests sur votre PC)
+# - SIGED_DOMAIN=mon.domaine.tld -> certificat Let's Encrypt obtenu et renouvelé automatiquement
+#   (le domaine doit pointer vers l'IP du serveur et les ports 80/443 être ouverts)
+{$SIGED_DOMAIN:localhost} {
+	tls {
+		protocols tls1.3
+	}
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Content-Security-Policy "default-src 'self'; img-src 'self' blob: data:; frame-src 'self' blob:; object-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+		-Server
+	}
+
+	request_body {
+		max_size 200MB
+	}
+
+	reverse_proxy api:8000 {
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

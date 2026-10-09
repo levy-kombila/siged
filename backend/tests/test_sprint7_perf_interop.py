@@ -61,3 +61,32 @@ def test_search_under_two_seconds_on_volume(client, admin):
         print(f"PERF {params} -> {elapsed * 1000:.0f} ms")
         assert elapsed < 2.0, f"{params} : {elapsed:.2f}s"
     assert client.get("/api/search", params={"q": "convention"}, headers=admin).json()["total"] == 200
+
+
+def _init_in_child(_):
+    from app.core.database import init_engine, initialize
+    init_engine()  # nouveau moteur dans le processus fils
+    initialize()
+    return True
+
+
+def test_concurrent_startup_is_safe(client):
+    """Les workers Uvicorn et le worker planifié (processus distincts) initialisent la base
+    en même temps : le verrou de démarrage doit éviter les créations concurrentes."""
+    import multiprocessing as mp
+
+    import pytest
+
+    from app.core.database import Base, get_engine
+    from app.models import Role, User
+
+    if get_engine().dialect.name != "postgresql":
+        pytest.skip("Plusieurs processus = déploiement PostgreSQL ; SQLite sert au développement mono-processus")
+
+    Base.metadata.drop_all(get_engine())
+    get_engine().dispose()
+    with mp.get_context("fork").Pool(6) as pool:
+        assert all(pool.map(_init_in_child, range(6)))
+    with SessionLocal() as db:
+        assert db.query(Role).count() == 5
+        assert db.query(User).count() == 1

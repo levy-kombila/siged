@@ -11,8 +11,7 @@ from sqlalchemy import text
 
 from app.api import admin, auth, classification, cron, documents, search
 from app.core.config import get_settings
-from app.core.database import SessionLocal, create_schema, get_engine, init_engine
-from app.services.bootstrap import seed
+from app.core.database import get_engine, init_engine, initialize
 from app.services.documents import BusinessError
 from app.services.storage import get_storage
 
@@ -27,9 +26,7 @@ async def lifespan(_: FastAPI):
     if problems:
         raise RuntimeError("Configuration de production incomplète : " + " ; ".join(problems))
     init_engine()
-    create_schema()
-    with SessionLocal() as db:
-        seed(db)
+    initialize()
     logger.info("SIGED démarré (base : %s, stockage : %s)", get_engine().dialect.name, get_settings().storage_backend)
     yield
 

@@ -23,16 +23,17 @@ Livrer une application utilisable de bout en bout, connectable au système d'inf
 ## 3. Réalisation
 
 * **Interface web** (JavaScript natif, sans dépendance externe, adaptée au mobile) : tableau de bord, recherche multicritère avec extraits surlignés, dépôt unitaire ou par lot, fiche document (aperçu, métadonnées, versions, circuit, traçabilité), plan de classement, conformité (vérification du journal, intégrité, bordereau DUA), interopérabilité. Les menus et actions dépendent des permissions ; tout contenu est échappé (protection XSS).
-* **Déploiement** : `docker-compose.yml` (Nginx, API, worker, PostgreSQL, MinIO, sauvegarde) ; image incluant Tesseract (fra/eng), Ghostscript, LibreOffice ; utilisateur non root ; sonde de santé.
-* **TLS 1.3** exclusif, HSTS, CSP, limitation de débit sur la connexion ; script de certificat de test.
+* **Déploiement** : `docker-compose.yml` (Caddy, API, worker, PostgreSQL, MinIO, sauvegarde) ; image incluant Tesseract (fra/eng), Ghostscript, LibreOffice ; utilisateur non root ; sonde de santé.
+* **TLS 1.3** exclusif, HSTS, CSP ; certificat Let's Encrypt obtenu et renouvelé automatiquement par Caddy (certificat local auto-signé pour les tests sur poste).
+* **Hébergement** : VM gratuite Oracle Cloud Always Free (ARM64), scripts `deploy/oracle/` d'installation, de démarrage et de mise à jour.
 * **Supervision** : `/health` (base + stockage, 503 si dégradé), en-tête `X-Process-Time-ms` sur chaque réponse, journalisation des requêtes de plus de 2 s, indicateurs `/api/admin/stats`.
 * **Sauvegardes** : dump PostgreSQL + objets chiffrés chaque nuit, `SHA256SUMS`, rétention 30 jours, script de restauration avec vérification.
 * **CI** : GitHub Actions exécute toute la suite sur SQLite et PostgreSQL avec les vrais outils OCR.
 * **Jeu de démonstration** : `python -m scripts.demo_data` crée 4 comptes (un par rôle) et 6 documents réalistes à différents stades.
 
-## 4. Tests (6 tests — `tests/test_sprint7_perf_interop.py`) et mesures
+## 4. Tests (7 tests — `tests/test_sprint7_perf_interop.py`) et mesures
 
-Sonde de santé · en-têtes de performance et de sécurité · interface servie · contrat OpenAPI exposant les routes clés · indicateurs du tableau de bord · **test de charge : 2 000 notices, 4 types de recherche < 2 s**.
+Sonde de santé · en-têtes de performance et de sécurité · interface servie · contrat OpenAPI exposant les routes clés · indicateurs du tableau de bord · **test de charge : 2 000 notices, 4 types de recherche < 2 s** · **démarrage simultané de 6 processus sans conflit d'initialisation**.
 
 | Recherche (2 000 notices) | SQLite | PostgreSQL 16 |
 |---|---|---|
@@ -43,7 +44,7 @@ Sonde de santé · en-têtes de performance et de sécurité · interface servie
 
 PostgreSQL est plus lent en plein texte car il calcule la racinisation, le classement et les extraits surlignés que SQLite ne fait pas ; il reste 4,5 fois sous l'objectif.
 
-**Résultat : 6/6 ✔**
+**Résultat : 7/7 ✔**
 
 ## 5. Démonstration
 
@@ -54,5 +55,5 @@ PostgreSQL est plus lent en plein texte car il calcule la racinisation, le class
 
 ## 6. Rétrospective
 
-* **Positif** : la recette sur données réalistes a révélé deux défauts (bifurcation du journal, aperçu PDF) corrigés avant livraison.
+* **Positif** : la recette sur données réalistes a révélé trois défauts corrigés avant livraison : bifurcation du journal sous concurrence, aperçu PDF non universel, et création concurrente du schéma par les workers Uvicorn au démarrage (corrigée par un verrou consultatif PostgreSQL, testé avec plusieurs processus).
 * **Dette technique identifiée** : migrations Alembic, cache des aperçus, colonne `tsvector` stockée pour accélérer le classement plein texte, test de charge en conditions de production (plusieurs centaines de milliers de documents).

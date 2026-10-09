@@ -1,8 +1,9 @@
 """Connexion à la base SQL (PostgreSQL en production, SQLite en développement)."""
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -59,9 +60,36 @@ def get_db():
         db.close()
 
 
+STARTUP_LOCK_ID = 15489_14721  # identifiant arbitraire du verrou de démarrage
+
+
+@contextmanager
+def startup_lock():
+    """Sérialise l'initialisation (création du schéma, données initiales) entre processus.
+
+    L'API tourne avec plusieurs workers Uvicorn et le worker planifié démarre en même
+    temps : sans verrou, ils créent les mêmes tables simultanément et l'un d'eux échoue
+    (violation d'unicité dans le catalogue PostgreSQL). Le verrou consultatif de session
+    est libéré à la sortie du bloc, ou automatiquement si le processus s'arrête.
+    """
+    engine = get_engine()
+    if engine.dialect.name != "postgresql":
+        yield
+        return
+    with engine.connect() as conn:
+        conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": STARTUP_LOCK_ID})
+        conn.commit()
+        try:
+            yield
+        finally:
+            conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": STARTUP_LOCK_ID})
+            conn.commit()
+
+
 def create_schema():
     """Crée les tables puis applique les objets spécifiques PostgreSQL
-    (index plein texte, triggers d'inaltérabilité du journal d'audit)."""
+    (index plein texte, triggers d'inaltérabilité du journal d'audit).
+    À appeler à l'intérieur de startup_lock()."""
     from app import models  # noqa: F401  (enregistre les modèles)
 
     engine = get_engine()
@@ -75,3 +103,13 @@ def create_schema():
             raw.commit()
         finally:
             raw.close()
+
+
+def initialize():
+    """Démarrage complet et sûr en multi-processus : schéma + rôles + admin + plan de classement."""
+    from app.services.bootstrap import seed
+
+    with startup_lock():
+        create_schema()
+        with SessionLocal() as db:
+            seed(db)
