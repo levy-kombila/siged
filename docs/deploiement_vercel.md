@@ -61,7 +61,13 @@ Les fichiers sont chiffrés par SIGED **avant** l'envoi : Supabase ne stocke que
 | `CRON_SECRET` | chaîne aléatoire ≥ 16 caractères (protège la route des tâches planifiées) |
 | `DATABASE_URL` | ajoutée automatiquement en liant la base Neon (Storage → Connect Project) |
 
-Générer les secrets (PowerShell ou terminal, dans le venv) :
+Générer les secrets (le détail de chaque valeur est dans [guide_secrets.md](guide_secrets.md)) :
+
+```bash
+python backend/scripts/generer_secrets.py      # affiche tous les secrets, n'écrit aucun fichier
+```
+
+Ou une par une :
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(48))"                     # SIGED_SECRET_KEY

@@ -50,6 +50,8 @@ Services : `nginx` (443, TLS 1.3), `api`, `worker` (OCR, intégrité, DUA, captu
 
 Le dépôt est prêt pour Vercel (`index.py`, `requirements.txt`, `vercel.json` à la racine) avec Neon (PostgreSQL) et Supabase Storage (S3). Guide pas à pas et limites du mode serverless : [docs/deploiement_vercel.md](docs/deploiement_vercel.md).
 
+**Secrets et clés** (où obtenir chaque valeur, Docker et Vercel) : [docs/guide_secrets.md](docs/guide_secrets.md) — et `python backend/scripts/generer_secrets.py` pour générer toutes les valeurs aléatoires.
+
 ## Tests
 
 ```bash
