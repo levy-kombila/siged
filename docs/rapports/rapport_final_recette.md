@@ -10,7 +10,7 @@ SIGED couvre les **20 exigences** du cahier des charges. Le projet a été condu
 | Interface web | 3 fichiers (HTML, CSS, JavaScript natif) |
 | Opérations d'API documentées (OpenAPI) | 48 |
 | Tables | 11 |
-| Tests automatisés | 71 (SQLite : 70 réussis, 1 propre à PostgreSQL ignoré ; PostgreSQL : 70 réussis, 1 propre à SQLite ignoré) |
+| Tests automatisés | 78 (SQLite : 76 réussis, 2 propres à PostgreSQL ignorés ; PostgreSQL : 77 réussis, 1 propre à SQLite ignoré) |
 | Recherche plein texte sur 2 000 notices | 0,44 s (PostgreSQL) — objectif < 2 s |
 
 ## 2. Matrice de conformité
@@ -32,7 +32,7 @@ SIGED couvre les **20 exigences** du cahier des charges. Le projet a été condu
 | EX-13 | Stockage hybride | PostgreSQL + MinIO/S3 ou disque | `test_metadata_stored_separately_from_file` | ✔ |
 | EX-14 | SHA-256 au dépôt, non-altération | Empreinte en flux + contrôle nocturne | `test_upload_creates_document_v1`, `test_integrity_check_detects_tampering` | ✔ |
 | EX-15 | RBAC | 5 rôles, 10 permissions | `test_rbac_*` | ✔ |
-| EX-16 | TLS 1.3 + AES-256 | Nginx TLS 1.3 only ; AES-256-GCM applicatif | `test_files_are_encrypted_at_rest`, `test_crypto_roundtrip_and_tamper_detection` ; configuration `deploy/nginx` | ✔ |
+| EX-16 | TLS 1.3 + AES-256 | Caddy TLS 1.3 uniquement (Let's Encrypt automatique) ; AES-256-GCM applicatif | `test_files_are_encrypted_at_rest`, `test_crypto_roundtrip_and_tamper_detection` ; configuration `deploy/caddy/Caddyfile` | ✔ |
 | EX-17 | ISO 15489 / ISO 14721 | Correspondances détaillées (cahier §9), export AIP BagIt | `test_aip_export_oais` | ✔ |
 | EX-18 | DUA et sort final automatisés | Job quotidien, bordereau, élimination certifiée, versement, gel | `test_retention_*`, `test_legal_hold_blocks_disposal` | ✔ |
 | EX-19 | Journal d'audit inaltérable | Chaîne SHA-256 + déclencheurs PostgreSQL | `test_audit_*`, `test_consultations_are_traced` | ✔ |
@@ -62,4 +62,4 @@ Le jeu de démonstration (`scripts/demo_data.py`) permet de rejouer ce scénario
 
 ## 5. Bilan personnel
 
-Le projet a mobilisé la conception de systèmes d'information (modélisation, architecture en couches), la sécurité (cryptographie appliquée, contrôle d'accès, analyse de menaces), l'administration de bases de données (index plein texte, déclencheurs, sauvegarde/restauration) et l'administration système (conteneurs, TLS, supervision). Les deux défauts découverts en recette — bifurcation du journal sous concurrence et aperçu PDF non universel — rappellent que les exigences non fonctionnelles se valident par des essais réalistes et non sur le papier.
+Le projet a mobilisé la conception de systèmes d'information (modélisation, architecture en couches), la sécurité (cryptographie appliquée, contrôle d'accès, analyse de menaces), l'administration de bases de données (index plein texte, déclencheurs, sauvegarde/restauration) et l'administration système (conteneurs, TLS, supervision). Les défauts découverts en recette — bifurcation du journal sous concurrence, aperçu PDF non universel, initialisation concurrente du schéma au démarrage — rappellent que les exigences non fonctionnelles se valident par des essais réalistes et non sur le papier.

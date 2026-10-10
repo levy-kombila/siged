@@ -1,8 +1,0 @@
-docs/
-deploy/
-backend/tests/
-backend/data/
-*.db
-.venv/
-__pycache__/
-docker-compose.yml

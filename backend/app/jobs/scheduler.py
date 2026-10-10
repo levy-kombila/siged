@@ -13,9 +13,8 @@ import logging
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from app.core.config import get_settings
-from app.core.database import SessionLocal, create_schema, init_engine
+from app.core.database import init_engine, initialize
 from app.jobs import hot_folder, mail_ingest, tasks
-from app.services.bootstrap import seed
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s : %(message)s")
 logger = logging.getLogger("siged.worker")
@@ -29,9 +28,7 @@ def job_hot_folder():
 
 def main():
     init_engine()
-    create_schema()
-    with SessionLocal() as db:
-        seed(db)
+    initialize()
     sched = BlockingScheduler(timezone="Africa/Libreville")
     sched.add_job(job_hot_folder, "interval", minutes=1, id="hot_folder", max_instances=1)
     if get_settings().imap_host:

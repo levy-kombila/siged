@@ -4,7 +4,7 @@
     python backend/scripts/generer_secrets.py    (depuis la racine du dépôt)
 
 Le script n'écrit AUCUN fichier : il affiche les valeurs, vous les copiez
-vous-même dans .env (Docker) ou dans les variables d'environnement Vercel.
+vous-même dans le fichier .env (sur votre PC pour les tests, puis sur le serveur).
 Chaque exécution produit de nouvelles valeurs : ne le relancez pas pour un
 système déjà en service (la clé AES déchiffre les fichiers existants).
 """
@@ -29,7 +29,6 @@ def main() -> None:
     aes_key = base64.b64encode(os.urandom(32)).decode()
     pg_password = secrets.token_hex(16)        # hexadécimal : sans caractère à encoder dans une URL
     minio_password = secrets.token_hex(20)
-    cron_secret = secrets.token_urlsafe(24)
     admin_password = mot_de_passe_admin()
 
     print("=" * 78)
@@ -37,7 +36,7 @@ def main() -> None:
     print(" (Bitwarden, KeePassXC...). Ne jamais les committer sur GitHub.")
     print("=" * 78)
     print(f"""
-# ---------- Bloc 1 : déploiement Docker (à recopier dans .env) ----------
+# ---------- À recopier dans .env (remplace les lignes correspondantes) ----------
 SIGED_ENVIRONMENT=prod
 SIGED_SECRET_KEY={secret_key}
 SIGED_STORAGE_ENCRYPTION_KEY={aes_key}
@@ -57,16 +56,8 @@ MINIO_ROOT_PASSWORD={minio_password}
 
 SIGED_BOOTSTRAP_ADMIN_PASSWORD={admin_password}
 
-# ---------- Bloc 2 : Vercel (Settings > Environment Variables) ----------
-SIGED_ENVIRONMENT=prod
-SIGED_SECRET_KEY={secret_key}
-SIGED_STORAGE_ENCRYPTION_KEY={aes_key}
-SIGED_BOOTSTRAP_ADMIN_PASSWORD={admin_password}
-CRON_SECRET={cron_secret}
-SIGED_STORAGE_BACKEND=s3
-SIGED_S3_BUCKET=siged-documents
-# + SIGED_S3_ENDPOINT_URL, SIGED_S3_REGION, SIGED_S3_ACCESS_KEY, SIGED_S3_SECRET_KEY : fournis par Supabase
-# + DATABASE_URL : ajoutée automatiquement par Neon
+# Adresse du site : localhost sur votre PC, votre domaine sur le serveur (ex. siged-levy.duckdns.org)
+SIGED_DOMAIN=localhost
 """)
     print("RAPPEL : sans SIGED_STORAGE_ENCRYPTION_KEY, les fichiers stockés sont irrécupérables.")
     print("Gardez-en une copie hors du serveur (gestionnaire de mots de passe + copie papier sous scellé).")

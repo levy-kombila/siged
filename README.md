@@ -17,9 +17,11 @@ Backend **Python / FastAPI**, PostgreSQL, MinIO (S3), OCRmyPDF/Tesseract/LibreOf
 | Conformité | Empreintes SHA-256 + contrôle nocturne, journal d'audit chaîné inaltérable, DUA / sort final / gel juridique, export AIP (BagIt) |
 | Interopérabilité | OpenAPI (`/docs`), clés d'API, webhooks signés HMAC, notifications e-mail |
 
-## Démarrage rapide (développement, sans Docker)
+## Mise en route : local → Docker → en ligne
 
-Prérequis : Python 3.11+ ; pour la conversion PDF/A/OCR : `tesseract-ocr tesseract-ocr-fra ghostscript libreoffice`.
+Guide complet pas à pas : **[docs/deploiement_oracle.md](docs/deploiement_oracle.md)**.
+
+**A. Local (développement, sans Docker)** — Python 3.11+ :
 
 ```bash
 cd backend
@@ -28,29 +30,29 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
-* Interface : http://localhost:8000 — compte initial `admin` / `Admin@SIGED2026` (**à changer**)
-* Documentation de l'API : http://localhost:8000/docs
-* Données de démonstration : `python -m scripts.demo_data` (comptes `archiviste`, `valideur`, `redacteur`, `consultant`, mot de passe `Demo#SIGED2026`)
+http://localhost:8000 — compte initial `admin` / `Admin@SIGED2026`. Base SQLite et fichiers chiffrés dans `backend/data`. Documentation de l'API : `/docs`.
 
-Par défaut : base SQLite `siged.db` et fichiers chiffrés dans `./data/storage`.
-
-## Déploiement complet (Docker)
+**B. Docker sur votre PC** — toute la pile (Caddy HTTPS, API, worker OCR, PostgreSQL, MinIO, sauvegardes) :
 
 ```bash
-cp .env.example .env        # puis renseigner les secrets (voir commentaires du fichier)
-sh deploy/scripts/gen-certs.sh    # certificat de test ; en production, certificat réel
+cp .env.example .env                       # Windows : copy .env.example .env
+python backend/scripts/generer_secrets.py  # puis recopier les valeurs dans .env (+ SIGED_DOMAIN=localhost)
 docker compose up -d --build
 ```
 
-Services : `nginx` (443, TLS 1.3), `api`, `worker` (OCR, intégrité, DUA, captures), `postgres`, `minio`, `backup`.
+https://localhost (certificat local auto-signé : avertissement du navigateur normal).
+
+**C. En ligne, gratuitement** — VM **Oracle Cloud Always Free** (ARM, 2 cœurs, 12 Go) + domaine DuckDNS ; Caddy obtient le certificat Let's Encrypt automatiquement :
+
+```bash
+bash deploy/oracle/installer.sh     # une fois : Docker, pare-feu, swap, mises à jour auto
+bash deploy/oracle/demarrer.sh      # construit, démarre, vérifie https://SIGED_DOMAIN/health
+bash deploy/oracle/mettre-a-jour.sh # après chaque git push
+```
+
+**Secrets et clés** — où obtenir chaque valeur : [docs/guide_secrets.md](docs/guide_secrets.md).
 
 > ⚠️ Sauvegardez `SIGED_STORAGE_ENCRYPTION_KEY` hors du serveur : sans elle, les fichiers sont irrécupérables.
-
-## Déploiement gratuit sur Vercel
-
-Le dépôt est prêt pour Vercel (`index.py`, `requirements.txt`, `vercel.json` à la racine) avec Neon (PostgreSQL) et Supabase Storage (S3). Guide pas à pas et limites du mode serverless : [docs/deploiement_vercel.md](docs/deploiement_vercel.md).
-
-**Secrets et clés** (où obtenir chaque valeur, Docker et Vercel) : [docs/guide_secrets.md](docs/guide_secrets.md) — et `python backend/scripts/generer_secrets.py` pour générer toutes les valeurs aléatoires.
 
 ## Tests
 
@@ -60,7 +62,7 @@ python -m pytest -q                                                    # SQLite
 SIGED_TEST_DATABASE_URL=postgresql+psycopg://user:pwd@localhost:5432/siged_test python -m pytest -q   # PostgreSQL
 ```
 
-77 tests, organisés par sprint (`tests/test_sprintN_*.py`) + déploiement serverless (`tests/test_deploiement_vercel.py`). Les tests de conversion sont ignorés automatiquement si OCRmyPDF, Ghostscript ou LibreOffice sont absents.
+78 tests, organisés par sprint (`tests/test_sprintN_*.py`) + mode serverless (`tests/test_deploiement_vercel.py`). Les tests de conversion sont ignorés automatiquement si OCRmyPDF, Ghostscript ou LibreOffice sont absents.
 
 ## Arborescence
 
@@ -71,13 +73,13 @@ siged/
 │   ├── sql/            objets PostgreSQL (index plein texte, déclencheurs d'audit)
 │   ├── scripts/        données de démonstration
 │   └── tests/          tests par sprint
-├── deploy/             nginx (TLS 1.3), scripts de certificats, sauvegarde, restauration
+├── deploy/             caddy (HTTPS, TLS 1.3), oracle (scripts serveur), sauvegarde, restauration
 ├── docs/
+│   ├── deploiement_oracle.md · guide_secrets.md
 │   ├── cahier_architecture.md / .docx / .pdf
 │   ├── rapports/       rapports des sprints 0 à 7 + rapport final de recette
 │   ├── diagrammes/     sources Mermaid + PNG
 │   ├── captures/       captures d'écran
 │   └── openapi.json    contrat d'API
-├── index.py · requirements.txt · vercel.json   (déploiement Vercel)
 ├── docker-compose.yml  ·  .env.example  ·  Makefile  ·  .github/workflows/ci.yml
 ```

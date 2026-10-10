@@ -52,7 +52,7 @@ Ce cahier décrit l'architecture logicielle, technique et de sécurité de **SIG
 | Chiffrement | `cryptography` : AES-256-GCM ; bcrypt ; JWT HS256 (PyJWT) | — |
 | Conversion / OCR | **OCRmyPDF** + Tesseract (fra, eng) + Ghostscript ; **LibreOffice** headless ; pypdf, pypdfium2 | OCRmyPDF 17 |
 | Tâches planifiées | APScheduler (processus *worker* séparé) | 3.11 |
-| Frontal | Nginx (TLS 1.3) | 1.27 |
+| Frontal | Caddy (HTTPS automatique Let's Encrypt, TLS 1.3) | 2.10 |
 | Interface web | HTML/CSS/JavaScript natif servi par l'API | — |
 | Déploiement | Docker Compose ; CI GitHub Actions | — |
 
@@ -76,7 +76,7 @@ Ce cahier décrit l'architecture logicielle, technique et de sécurité de **SIG
 
 Le système suit une **architecture en couches** déployée en conteneurs :
 
-* **Frontal (DMZ)** — Nginx termine le TLS 1.3, impose HSTS et la politique de sécurité du contenu (CSP), limite le débit sur l'authentification (anti force brute) et transmet les téléversements en flux continu.
+* **Frontal (DMZ)** — Caddy termine le TLS 1.3, obtient et renouvelle automatiquement le certificat Let's Encrypt, impose HSTS et la politique de sécurité du contenu (CSP), et limite la taille des téléversements (200 Mo).
 * **Application** — l'API FastAPI (4 workers) porte la logique métier et l'interface web ; le *worker* exécute les tâches planifiées et les captures automatiques. Les deux partagent le même code et la même configuration.
 * **Données** — PostgreSQL contient métadonnées, index, droits et traces ; MinIO contient les fichiers chiffrés. Les deux sont sauvegardés chaque jour.
 
@@ -194,7 +194,7 @@ Le job quotidien (03:00) établit le **bordereau** des documents validés dont l
 ## 8.1 Authentification
 
 * Mots de passe hachés par **bcrypt** (coût 12) ; politique : 10 caractères minimum, 3 classes de caractères sur 4.
-* **Verrouillage** du compte 15 minutes après 5 échecs ; limitation de débit Nginx sur `/api/auth/login`.
+* **Verrouillage** du compte 15 minutes après 5 échecs (protection contre la force brute).
 * Jetons **JWT** HS256 de 30 minutes (identifiant unique `jti`) ; l'état du compte est revérifié à chaque requête (un compte désactivé perd l'accès immédiatement).
 * **Clés d'API** pour les applications : 256 bits d'aléa, affichées une seule fois, stockées sous forme d'empreinte SHA-256, révocables, jamais de rôle administrateur.
 
@@ -217,7 +217,7 @@ Les permissions sont vérifiées côté serveur par une dépendance FastAPI (`re
 
 ## 8.3 Chiffrement
 
-* **En transit** : TLS 1.3 exclusivement (`ssl_protocols TLSv1.3`), HSTS 2 ans, tickets de session désactivés.
+* **En transit** : TLS 1.3 exclusivement (`protocols tls1.3`), HSTS 2 ans, certificat Let's Encrypt renouvelé automatiquement par Caddy.
 * **Au repos** : AES-256-GCM par blocs de 1 Mo. Chaque bloc a un nonce unique (préfixe aléatoire de 64 bits + compteur) et des données associées (index du bloc + drapeau « dernier bloc ») : un bloc modifié, retiré, permuté ou une troncature sont détectés. La clé (32 octets) est fournie par variable d'environnement et **doit être sauvegardée hors du serveur** ; l'application refuse de démarrer en production sans elle.
 * Les téléchargements et aperçus sont déchiffrés **en flux** : le fichier en clair n'est jamais écrit sur disque côté serveur (hors répertoire temporaire de conversion, supprimé aussitôt).
 
@@ -276,7 +276,7 @@ Leviers : index GIN/trigrammes/B-tree, pagination obligatoire (100 résultats au
 
 La composition Docker livrée cible un serveur unique (redémarrage automatique, sondes de santé). Pour l'objectif 99,9 %, l'architecture cible de production est la suivante :
 
-* **API sans état** : au moins 2 instances derrière Nginx ou un répartiteur (Keepalived + adresse IP virtuelle) ; mise à jour progressive sans interruption.
+* **API sans état** : au moins 2 instances derrière Caddy ou un répartiteur (Keepalived + adresse IP virtuelle) ; mise à jour progressive sans interruption.
 * **PostgreSQL** en réplication en continu avec bascule automatique (Patroni ou équivalent) ; réplique en lecture pour les recherches lourdes.
 * **MinIO distribué** (4 nœuds minimum, codage à effacement) : tolère la perte d'un nœud ou de disques.
 * **Supervision** : sonde `/health` (base + stockage), alertes sur les requêtes lentes, échecs d'intégrité (webhook `integrity.failure`) et échecs de conversion.
@@ -317,7 +317,7 @@ Exemple d'intégration SIRH : à l'embauche, le SIRH appelle `POST /api/document
 * **Configuration** : uniquement par variables d'environnement `SIGED_*` (`.env.example` fourni) ; aucun secret dans le code.
 * **Démarrage** : `make certs && docker compose up -d --build` ; le premier démarrage crée les rôles, le compte administrateur et le plan de classement initial.
 * **Journaux** : sortie standard des conteneurs (format horodaté), à collecter par la plateforme (Loki, ELK…).
-* **Qualité** : 71 tests automatisés exécutés en intégration continue sur SQLite **et** PostgreSQL, avec la vraie chaîne OCR/PDF/A.
+* **Qualité** : 78 tests automatisés exécutés en intégration continue sur SQLite **et** PostgreSQL, avec la vraie chaîne OCR/PDF/A.
 
 # 13. Limites et évolutions
 
