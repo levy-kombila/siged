@@ -5,7 +5,7 @@ Le parcours se fait en **trois étapes**, dans cet ordre. Chacune valide la pré
 | Étape | Où | Ce qu'on vérifie | Durée |
 |---|---|---|---|
 | **A. Local (venv)** | Votre PC Windows, Python seul | Le code fonctionne | 10 min |
-| **B. Docker local** | Votre PC, Docker Desktop | Toute la pile (PostgreSQL, stockage chiffré, OCR, HTTPS) fonctionne en conteneurs | 30 min |
+| **B. Docker local** | Votre PC, Docker Desktop | Toute la pile (PostgreSQL, MinIO, OCR, HTTPS) fonctionne en conteneurs | 30 min |
 | **C. En ligne** | VM gratuite Oracle Cloud | Le site est accessible publiquement en HTTPS | 1 h |
 
 Toutes les commandes Windows sont pour **PowerShell**. Les commandes du serveur sont pour **bash** (Linux), une fois connecté en SSH.
@@ -76,7 +76,7 @@ Arrêt : `docker compose down` (les données sont conservées dans des volumes D
 
 ### Pourquoi Oracle Cloud ?
 
-L'offre **Always Free** d'Oracle fournit une vraie machine virtuelle, gratuite sans limite de durée : processeur ARM Ampere, **2 cœurs et 12 Go de mémoire** au total (allocation réduite en juin 2026), 200 Go de disque. C'est la seule offre gratuite qui fait tourner **toute** la pile SIGED (OCR, PDF/A, PostgreSQL, stockage chiffré) sans mise en veille.
+L'offre **Always Free** d'Oracle fournit une vraie machine virtuelle, gratuite sans limite de durée : processeur ARM Ampere, **2 cœurs et 12 Go de mémoire** au total (allocation réduite en juin 2026), 200 Go de disque. C'est la seule offre gratuite qui fait tourner **toute** la pile SIGED (OCR, PDF/A, PostgreSQL, MinIO) sans mise en veille.
 
 Les plateformes gratuites de type Render ou Koyeb n'offrent que 512 Mo de mémoire et se mettent en veille. LibreOffice et l'OCR n'y tiennent pas.
 

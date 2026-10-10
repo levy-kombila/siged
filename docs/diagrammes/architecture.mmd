@@ -15,7 +15,7 @@ flowchart TB
   end
   subgraph Données
     PG[(PostgreSQL 16<br/>métadonnées · index FTS<br/>journal d'audit chaîné)]
-    S3[(Volume de fichiers<br/>chiffrés AES-256-GCM<br/>ou stockage S3)]
+    S3[(MinIO / S3<br/>fichiers chiffrés<br/>AES-256-GCM)]
     BK[(Sauvegardes<br/>quotidiennes)]
   end
   U -->|HTTPS| NG

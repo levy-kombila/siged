@@ -3,7 +3,7 @@ sequenceDiagram
   actor C as Contributeur
   participant API as API FastAPI
   participant DB as PostgreSQL
-  participant ST as Stockage (chiffré)
+  participant ST as MinIO (chiffré)
   participant BG as Tâche de fond
   C->>API: POST /api/documents (fichier + fiche JSON)
   API->>API: contrôle JWT + permission document:write

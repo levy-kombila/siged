@@ -29,7 +29,7 @@ SIGED couvre les **20 exigences** du cahier des charges. Le projet a été condu
 | EX-10 | Prévisualisation sans téléchargement | Pages rendues en PNG + PDF inline | `test_preview_inline_without_download`, `test_preview_as_page_images` | ✔ |
 | EX-11 | Versions sans écraser l'historique | Majeure/mineure, historique immuable | `test_minor_and_major_versions_keep_history` | ✔ |
 | EX-12 | Workflow brouillon/validation/validé | Machine à états, séparation des tâches | `test_full_workflow`, `test_author_cannot_self_validate` | ✔ |
-| EX-13 | Stockage hybride | PostgreSQL + volume de fichiers chiffrés (ou stockage objet S3) | `test_metadata_stored_separately_from_file` | ✔ |
+| EX-13 | Stockage hybride | PostgreSQL + MinIO/S3 ou disque | `test_metadata_stored_separately_from_file` | ✔ |
 | EX-14 | SHA-256 au dépôt, non-altération | Empreinte en flux + contrôle nocturne | `test_upload_creates_document_v1`, `test_integrity_check_detects_tampering` | ✔ |
 | EX-15 | RBAC | 5 rôles, 10 permissions | `test_rbac_*` | ✔ |
 | EX-16 | TLS 1.3 + AES-256 | Caddy TLS 1.3 uniquement (Let's Encrypt automatique) ; AES-256-GCM applicatif | `test_files_are_encrypted_at_rest`, `test_crypto_roundtrip_and_tamper_detection` ; configuration `deploy/caddy/Caddyfile` | ✔ |

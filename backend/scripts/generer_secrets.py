@@ -28,6 +28,7 @@ def main() -> None:
     secret_key = secrets.token_urlsafe(48)
     aes_key = base64.b64encode(os.urandom(32)).decode()
     pg_password = secrets.token_hex(16)        # hexadécimal : sans caractère à encoder dans une URL
+    minio_password = secrets.token_hex(20)
     admin_password = mot_de_passe_admin()
 
     print("=" * 78)
@@ -45,8 +46,13 @@ POSTGRES_USER=siged
 POSTGRES_PASSWORD={pg_password}
 SIGED_DATABASE_URL=postgresql+psycopg://siged:{pg_password}@postgres:5432/siged
 
-# Fichiers : volume Docker chiffré (réglé dans docker-compose.yml). Les anciennes lignes
-# SIGED_S3_* et MINIO_* de votre .env ne servent plus : vous pouvez les supprimer.
+SIGED_STORAGE_BACKEND=s3
+SIGED_S3_ENDPOINT_URL=http://minio:9000
+SIGED_S3_ACCESS_KEY=siged
+SIGED_S3_SECRET_KEY={minio_password}
+SIGED_S3_BUCKET=siged-documents
+MINIO_ROOT_USER=siged
+MINIO_ROOT_PASSWORD={minio_password}
 
 SIGED_BOOTSTRAP_ADMIN_PASSWORD={admin_password}
 
