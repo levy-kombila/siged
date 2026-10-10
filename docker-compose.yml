@@ -9,7 +9,7 @@ x-app: &app
   env_file: .env
   depends_on:
     postgres: { condition: service_healthy }
-    minio: { condition: service_healthy }
+    minio: { condition: service_started }
   volumes:
     - inbox:/data/inbox
   environment:
@@ -36,14 +36,14 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    # MinIO n'est plus publié sur Docker Hub depuis 2026 (minio/minio : « pull access denied »).
+    # pgsty/minio est la reprise communautaire, compatible à l'identique (mêmes variables MINIO_*,
+    # même format de données) et multi-architecture (amd64 pour votre PC, arm64 pour Oracle).
+    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
     command: server /data --console-address ":9001"
     env_file: .env
     volumes: [miniodata:/data]
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      retries: 10
+    # Pas de healthcheck : l'API réessaie la connexion au stockage tant qu'il n'est pas prêt.
     restart: unless-stopped
 
   caddy:
