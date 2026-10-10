@@ -94,7 +94,7 @@ Acceptez la fenêtre de confirmation, puis redémarrez le navigateur. Cette éta
 
 ### B.5 Accéder à la base avec pgAdmin, ou lancer uvicorn sur la base Docker
 
-La base PostgreSQL du conteneur est accessible **depuis votre PC uniquement**, sur le port **5433**. Le port 5432 reste ainsi libre pour le PostgreSQL installé sur Windows.
+La base PostgreSQL du conteneur est accessible **depuis votre PC uniquement**, sur le port **55432**, choisi pour ne pas gêner un PostgreSQL installé sur Windows (5432, 5433…). Pour en changer, ajoutez `SIGED_PG_PORT=xxxxx` dans `.env`.
 
 **pgAdmin 4** → *Register → Server* :
 
@@ -102,7 +102,7 @@ La base PostgreSQL du conteneur est accessible **depuis votre PC uniquement**, s
 |---|---|---|
 | General | Name | `SIGED (Docker)` |
 | Connection | Host | `localhost` |
-| | Port | `5433` |
+| | Port | `55432` |
 | | Maintenance database | `siged` |
 | | Username | `siged` (valeur de `POSTGRES_USER`) |
 | | Password | valeur de `POSTGRES_PASSWORD` de votre `.env` |
@@ -113,7 +113,7 @@ La base PostgreSQL du conteneur est accessible **depuis votre PC uniquement**, s
 docker compose exec postgres createdb -U siged siged_dev
 cd D:\Django\siged\backend                # uvicorn se lance TOUJOURS depuis backend
 .venv\Scripts\activate
-$env:SIGED_DATABASE_URL = "postgresql+psycopg://siged:VOTRE_POSTGRES_PASSWORD@localhost:5433/siged_dev"
+$env:SIGED_DATABASE_URL = "postgresql+psycopg://siged:VOTRE_POSTGRES_PASSWORD@localhost:55432/siged_dev"
 uvicorn app.main:app --reload
 ```
 
