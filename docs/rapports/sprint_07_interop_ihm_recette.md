@@ -23,7 +23,7 @@ Livrer une application utilisable de bout en bout, connectable au système d'inf
 ## 3. Réalisation
 
 * **Interface web** (JavaScript natif, sans dépendance externe, adaptée au mobile) : tableau de bord, recherche multicritère avec extraits surlignés, dépôt unitaire ou par lot, fiche document (aperçu, métadonnées, versions, circuit, traçabilité), plan de classement, conformité (vérification du journal, intégrité, bordereau DUA), interopérabilité. Les menus et actions dépendent des permissions ; tout contenu est échappé (protection XSS).
-* **Déploiement** : `docker-compose.yml` (Caddy, API, worker, PostgreSQL, MinIO, sauvegarde) ; image incluant Tesseract (fra/eng), Ghostscript, LibreOffice ; utilisateur non root ; sonde de santé.
+* **Déploiement** : `docker-compose.yml` (Caddy, API, worker, PostgreSQL, volume de stockage chiffré, sauvegarde) ; image incluant Tesseract (fra/eng), Ghostscript, LibreOffice ; utilisateur non root ; sonde de santé.
 * **TLS 1.3** exclusif, HSTS, CSP ; certificat Let's Encrypt obtenu et renouvelé automatiquement par Caddy (certificat local auto-signé pour les tests sur poste).
 * **Hébergement** : VM gratuite Oracle Cloud Always Free (ARM64), scripts `deploy/oracle/` d'installation, de démarrage et de mise à jour.
 * **Supervision** : `/health` (base + stockage, 503 si dégradé), en-tête `X-Process-Time-ms` sur chaque réponse, journalisation des requêtes de plus de 2 s, indicateurs `/api/admin/stats`.

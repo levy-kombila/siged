@@ -15,7 +15,7 @@ COPY app ./app
 COPY sql ./sql
 COPY scripts ./scripts
 
-RUN useradd -r -u 1001 siged && mkdir -p /data && chown -R siged /app /data
+RUN useradd -r -u 1001 siged && mkdir -p /data/storage /data/inbox && chown -R siged /app /data
 USER siged
 ENV PYTHONUNBUFFERED=1 HOME=/tmp
 EXPOSE 8000

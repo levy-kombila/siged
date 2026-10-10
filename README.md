@@ -1,7 +1,7 @@
 # SIGED — Système Intégré de Gestion Électronique des Documents
 
 GED + archivage électronique (SAE) conforme aux principes **ISO 15489** et **ISO 14721 (OAIS)**.
-Backend **Python / FastAPI**, PostgreSQL, MinIO (S3), OCRmyPDF/Tesseract/LibreOffice, interface web incluse.
+Backend **Python / FastAPI**, PostgreSQL, stockage de fichiers chiffré AES-256 (disque ou S3), OCRmyPDF/Tesseract/LibreOffice, interface web incluse.
 
 ## Fonctionnalités
 
@@ -32,7 +32,7 @@ uvicorn app.main:app --reload
 
 http://localhost:8000 — compte initial `admin` / `Admin@SIGED2026`. Base SQLite et fichiers chiffrés dans `backend/data`. Documentation de l'API : `/docs`.
 
-**B. Docker sur votre PC** — toute la pile (Caddy HTTPS, API, worker OCR, PostgreSQL, MinIO, sauvegardes) :
+**B. Docker sur votre PC** — toute la pile (Caddy HTTPS, API, worker OCR, PostgreSQL, stockage chiffré, sauvegardes) :
 
 ```bash
 cp .env.example .env                       # Windows : copy .env.example .env

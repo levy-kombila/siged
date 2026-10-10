@@ -48,7 +48,7 @@ Ce cahier décrit l'architecture logicielle, technique et de sécurité de **SIG
 | API | Python 3.12 + **FastAPI** + Uvicorn | FastAPI 0.143 |
 | Accès aux données | SQLAlchemy 2 (ORM), psycopg 3 | 2.1 |
 | Base de données | **PostgreSQL 16** (+ extension `pg_trgm`) ; SQLite en développement | 16 |
-| Stockage des fichiers | **MinIO** (compatible S3) ou système de fichiers | — |
+| Stockage des fichiers | Système de fichiers sur volume dédié (défaut) ou stockage objet compatible S3 (Garage, Cloudflare R2, AWS S3…) | — |
 | Chiffrement | `cryptography` : AES-256-GCM ; bcrypt ; JWT HS256 (PyJWT) | — |
 | Conversion / OCR | **OCRmyPDF** + Tesseract (fra, eng) + Ghostscript ; **LibreOffice** headless ; pypdf, pypdfium2 | OCRmyPDF 17 |
 | Tâches planifiées | APScheduler (processus *worker* séparé) | 3.11 |
@@ -64,6 +64,8 @@ Ce cahier décrit l'architecture logicielle, technique et de sécurité de **SIG
 
 **ADR-03 — Chiffrement applicatif AES-256-GCM avant stockage.** Plutôt que de dépendre uniquement du chiffrement côté serveur de MinIO (qui exige un KMS), l'application chiffre chaque fichier **avant** de l'écrire. Le stockage (MinIO, S3 public, NAS) ne voit jamais de données en clair : une fuite de sauvegarde ou du bucket ne révèle rien. Le mode GCM authentifie aussi le contenu : toute altération est détectée au déchiffrement, ce qui complète le contrôle SHA-256.
 
+**ADR-07 — Stockage sur système de fichiers chiffré plutôt que MinIO (révision d'octobre 2026).** MinIO a archivé son projet communautaire et retiré ses images Docker en septembre 2026 : le service ne pouvait plus être déployé. Le cahier des charges autorise « Object Storage / système de fichiers ». SIGED stocke donc par défaut ses fichiers sur un **volume dédié**, séparé de la base, et toujours chiffrés par l'application (ADR-03). Cela fait un service de moins à exploiter et sécuriser. Grâce à l'abstraction `StorageBackend`, il suffit d'une variable pour passer à un stockage objet compatible S3 (Garage, Cloudflare R2, AWS S3) lorsque le volume ou la haute disponibilité l'exigeront.
+
 **ADR-04 — OCRmyPDF plutôt qu'Apache Tika.** OCRmyPDF produit directement un **PDF/A-2b** avec couche texte OCR (exigence EX-06), là où Tika ne fait qu'extraire du texte et impose une JVM. LibreOffice headless convertit les formats bureautiques en PDF/A-2b. La chaîne se dégrade proprement si un outil manque (statut `PARTIAL`, journal de conversion).
 
 **ADR-05 — Journal d'audit chaîné par empreintes.** Chaque entrée contient l'empreinte de la précédente (`prev_hash`) et sa propre empreinte (`entry_hash`) : c'est le principe d'une chaîne de blocs, sans sa complexité. Deux protections se combinent : en PostgreSQL, des déclencheurs interdisent `UPDATE`, `DELETE` et `TRUNCATE` ; et si un administrateur de base contourne ces déclencheurs, la vérification de la chaîne révèle l'altération.
@@ -78,7 +80,7 @@ Le système suit une **architecture en couches** déployée en conteneurs :
 
 * **Frontal (DMZ)** — Caddy termine le TLS 1.3, obtient et renouvelle automatiquement le certificat Let's Encrypt, impose HSTS et la politique de sécurité du contenu (CSP), et limite la taille des téléversements (200 Mo).
 * **Application** — l'API FastAPI (4 workers) porte la logique métier et l'interface web ; le *worker* exécute les tâches planifiées et les captures automatiques. Les deux partagent le même code et la même configuration.
-* **Données** — PostgreSQL contient métadonnées, index, droits et traces ; MinIO contient les fichiers chiffrés. Les deux sont sauvegardés chaque jour.
+* **Données** — PostgreSQL contient métadonnées, index, droits et traces ; un volume de stockage séparé contient les fichiers chiffrés. Les deux sont sauvegardés chaque jour.
 
 # 5. Vue logique
 
@@ -278,12 +280,12 @@ La composition Docker livrée cible un serveur unique (redémarrage automatique,
 
 * **API sans état** : au moins 2 instances derrière Caddy ou un répartiteur (Keepalived + adresse IP virtuelle) ; mise à jour progressive sans interruption.
 * **PostgreSQL** en réplication en continu avec bascule automatique (Patroni ou équivalent) ; réplique en lecture pour les recherches lourdes.
-* **MinIO distribué** (4 nœuds minimum, codage à effacement) : tolère la perte d'un nœud ou de disques.
+* **Stockage objet distribué** compatible S3 (Garage, Ceph RGW… ; 3 nœuds minimum avec réplication) : tolère la perte d'un nœud ou de disques. Le backend `s3` de SIGED s'y connecte sans changement de code.
 * **Supervision** : sonde `/health` (base + stockage), alertes sur les requêtes lentes, échecs d'intégrité (webhook `integrity.failure`) et échecs de conversion.
 
 ## 10.3 Sauvegardes quotidiennes
 
-* Conteneur `backup` : chaque nuit à 01:00, `pg_dump` (format personnalisé) + archive des objets MinIO (déjà chiffrés), fichier `SHA256SUMS`, rétention de 30 jours.
+* Conteneur `backup` : chaque nuit à 01:00, `pg_dump` (format personnalisé) + archive du volume de fichiers (déjà chiffrés), fichier `SHA256SUMS`, rétention de 30 jours.
 * Copie hors site recommandée (règle 3-2-1) ; **la clé AES est sauvegardée séparément** (coffre-fort, enveloppe scellée).
 * Restauration : `deploy/scripts/restore.sh` vérifie les empreintes, restaure la base ; un contrôle d'intégrité complet valide ensuite la cohérence base ↔ fichiers.
 * Objectifs indicatifs : perte de données maximale (RPO) 24 h, ramenée à quelques minutes avec l'archivage continu des journaux PostgreSQL (WAL) ; reprise (RTO) inférieure à 4 h.
