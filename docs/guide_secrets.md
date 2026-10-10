@@ -13,9 +13,9 @@ Ce guide explique, variable par variable, **d'où vient chaque valeur** et **com
 
 | Famille | Variables | Comment l'obtenir |
 |---|---|---|
-| **A. Générées par vous** (aléatoires) | `SIGED_SECRET_KEY`, `SIGED_STORAGE_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, `SIGED_BOOTSTRAP_ADMIN_PASSWORD` | Script fourni `generer_secrets.py` (§2) |
+| **A. Générées par vous** (aléatoires) | `SIGED_SECRET_KEY`, `SIGED_STORAGE_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, `MINIO_ROOT_PASSWORD`, `SIGED_BOOTSTRAP_ADMIN_PASSWORD` | Script fourni `generer_secrets.py` (§2) |
 | **B. Fournies par un service en ligne** | Mots de passe SMTP/IMAP (facultatifs) | Créés sur le site de la messagerie (§6) |
-| **C. Simples réglages** | `SIGED_ENVIRONMENT`, `SIGED_DOMAIN`, `SIGED_OCR_LANGUAGES`… | Valeurs fixes indiquées dans ce guide |
+| **C. Simples réglages** | `SIGED_ENVIRONMENT`, `SIGED_DOMAIN`, `SIGED_STORAGE_BACKEND`, `SIGED_S3_BUCKET`, `SIGED_OCR_LANGUAGES`… | Valeurs fixes indiquées dans ce guide |
 
 ---
 
@@ -41,7 +41,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 # SIGED_STORAGE_ENCRYPTION_KEY : clé AES-256 (32 octets en base64)
 python -c "import os, base64; print(base64.b64encode(os.urandom(32)).decode())"
 
-# POSTGRES_PASSWORD (hexadécimal, sans caractère spécial)
+# POSTGRES_PASSWORD / MINIO_ROOT_PASSWORD (hexadécimal, sans caractère spécial)
 python -c "import secrets; print(secrets.token_hex(16))"
 
 ```
@@ -55,6 +55,7 @@ python -c "import secrets; print(secrets.token_hex(16))"
 | `SIGED_SECRET_KEY` | Signe les jetons JWT de connexion | ≥ 32 caractères aléatoires | La changer déconnecte tous les utilisateurs (sans perte de données) |
 | `SIGED_STORAGE_ENCRYPTION_KEY` | Chiffre chaque fichier en AES-256 avant stockage | 44 caractères base64 (= 32 octets) | **Ne jamais la changer** sur un système en service |
 | `POSTGRES_PASSWORD` | Mot de passe de la base (Docker) | Hexadécimal conseillé | Doit être **identique** dans `SIGED_DATABASE_URL` |
+| `MINIO_ROOT_PASSWORD` | Mot de passe du stockage MinIO (Docker) | ≥ 8 caractères | Doit être **identique** à `SIGED_S3_SECRET_KEY` |
 | `SIGED_BOOTSTRAP_ADMIN_PASSWORD` | Mot de passe du compte `admin` créé **au premier démarrage** | ≥ 10 caractères, 3 types parmi : minuscules, majuscules, chiffres, symboles | Ne sert qu'une fois ; ensuite on change le mot de passe dans l'application |
 
 **Pourquoi l'hexadécimal pour PostgreSQL ?** Le mot de passe est aussi écrit dans l'URL `postgresql+psycopg://siged:MOTDEPASSE@postgres:5432/siged`. Des caractères comme `@`, `/`, `:` ou `#` casseraient cette URL. Le format hexadécimal (`0-9a-f`) n'en contient aucun.
@@ -78,24 +79,21 @@ SIGED_DATABASE_URL=postgresql+psycopg://siged:3f9c...e21@postgres:5432/siged
 
 ## 5. Stockage des fichiers
 
-### Volume Docker chiffré (par défaut) : rien à configurer
+### MinIO (inclus)
 
-Les fichiers sont écrits dans le volume Docker `storage`, séparé de la base, et **chiffrés par SIGED** avec `SIGED_STORAGE_ENCRYPTION_KEY` avant d'être écrits sur le disque. Ce réglage est fixé dans `docker-compose.yml` : **aucune variable à ajouter** dans `.env`.
-
-> MinIO, prévu à l'origine, n'est plus utilisable : ses images Docker ont été retirées en septembre 2026 (`pull access denied for minio/minio`). Si votre `.env` contient encore des lignes `SIGED_S3_*` ou `MINIO_*`, elles sont ignorées : vous pouvez les supprimer.
-
-### Plus tard : stockage objet externe compatible S3 (facultatif)
-
-Pour stocker les fichiers chez un fournisseur S3 (Cloudflare R2, AWS S3, Garage auto-hébergé…), supprimez les lignes `SIGED_STORAGE_BACKEND` et `SIGED_STORAGE_LOCAL_PATH` dans `docker-compose.yml` et ajoutez dans `.env` :
+Le conteneur `minio` utilise `MINIO_ROOT_USER` et `MINIO_ROOT_PASSWORD`. SIGED s'y connecte avec **les mêmes valeurs** :
 
 ```dotenv
 SIGED_STORAGE_BACKEND=s3
-SIGED_S3_ENDPOINT_URL=https://<point d'accès du fournisseur>
-SIGED_S3_REGION=<région>
-SIGED_S3_ACCESS_KEY=<clé d'accès>
-SIGED_S3_SECRET_KEY=<clé secrète>
-SIGED_S3_BUCKET=siged-documents
+SIGED_S3_ENDPOINT_URL=http://minio:9000
+SIGED_S3_ACCESS_KEY=siged                 # = MINIO_ROOT_USER
+SIGED_S3_SECRET_KEY=7a1b...90             # = MINIO_ROOT_PASSWORD
+SIGED_S3_BUCKET=siged-documents           # créé automatiquement
+MINIO_ROOT_USER=siged
+MINIO_ROOT_PASSWORD=7a1b...90
 ```
+
+Console d'administration MinIO (facultatif) : `http://localhost:9001` si vous ajoutez le port `9001` dans `docker-compose.yml`.
 
 ---
 
@@ -148,6 +146,14 @@ POSTGRES_USER=siged
 POSTGRES_PASSWORD=<généré>
 SIGED_DATABASE_URL=postgresql+psycopg://siged:<même valeur>@postgres:5432/siged
 
+SIGED_STORAGE_BACKEND=s3
+SIGED_S3_ENDPOINT_URL=http://minio:9000
+SIGED_S3_ACCESS_KEY=siged
+SIGED_S3_SECRET_KEY=<généré>
+SIGED_S3_BUCKET=siged-documents
+MINIO_ROOT_USER=siged
+MINIO_ROOT_PASSWORD=<même valeur que SIGED_S3_SECRET_KEY>
+
 SIGED_BOOTSTRAP_ADMIN_PASSWORD=<généré>
 SIGED_RETENTION_AUTO_EXECUTE=false
 SIGED_OCR_LANGUAGES=fra+eng
@@ -176,7 +182,7 @@ Le plus simple : `copy .env.example .env`, puis remplacez les valeurs par celles
 |---|---|
 | `https://localhost/health` (PC) ou `https://votre-domaine/health` (serveur) | `{"status":"ok","database":true,"storage":true}` |
 | `"database": false` | `POSTGRES_PASSWORD` différent du mot de passe écrit dans `SIGED_DATABASE_URL` |
-| `"storage": false` | Volume de stockage non monté (lancez bien `docker compose up` depuis la racine du projet) |
+| `"storage": false` | `SIGED_S3_SECRET_KEY` différent de `MINIO_ROOT_PASSWORD` |
 | Erreur `Configuration de production incomplète` dans les logs | Le message indique la variable manquante |
 | Connexion `admin` refusée | Le mot de passe initial n'est appliqué qu'à la **création** du compte : si la base existait déjà, c'est l'ancien qui reste valable |
 
