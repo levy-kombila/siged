@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -22,7 +22,8 @@ router = APIRouter(prefix="/api", tags=["Authentification & utilisateurs"])
 def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     s = get_settings()
     ip, ua = client_info(request)
-    user = db.execute(select(User).where(User.username == form.username)).scalar()
+    # identifiant insensible à la casse : « Admin » = « admin »
+    user = db.execute(select(User).where(func.lower(User.username) == form.username.strip().lower())).scalar()
     now = datetime.now(timezone.utc)
     if user and user.locked_until:
         locked = user.locked_until if user.locked_until.tzinfo else user.locked_until.replace(tzinfo=timezone.utc)
@@ -74,9 +75,10 @@ def _role(db: Session, name: str) -> Role:
 def create_user(data: UserCreate, db: Session = Depends(get_db), p: Principal = Depends(require(Perm.USER_MANAGE))):
     if err := check_password_policy(data.password):
         raise HTTPException(422, err)
-    if db.execute(select(User).where((User.username == data.username) | (User.email == data.email))).first():
+    if db.execute(select(User).where((func.lower(User.username) == data.username.lower())
+                                     | (func.lower(User.email) == data.email.lower()))).first():
         raise HTTPException(409, "Nom d'utilisateur ou e-mail déjà utilisé")
-    user = User(username=data.username, email=data.email, full_name=data.full_name,
+    user = User(username=data.username.lower(), email=data.email.lower(), full_name=data.full_name,
                 hashed_password=hash_password(data.password), role_id=_role(db, data.role).id)
     db.add(user)
     db.flush()

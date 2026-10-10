@@ -27,6 +27,9 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    # Accessible depuis VOTRE PC uniquement (pgAdmin, uvicorn en local) sur le port 5433,
+    # pour ne pas entrer en conflit avec un PostgreSQL déjà installé sur Windows (port 5432).
+    ports: ["127.0.0.1:5433:5432"]
     env_file: .env
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:

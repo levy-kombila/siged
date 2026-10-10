@@ -85,3 +85,18 @@ def test_roles_listed(client, admin):
 
 def test_login_helper(client):
     assert "Authorization" in login(client, *ADMIN)
+
+
+def test_login_is_case_insensitive(client):
+    assert client.post("/api/auth/login", data={"username": "Admin", "password": ADMIN[1]}).status_code == 200
+
+
+def test_reset_password_script(client, monkeypatch, capsys):
+    import sys
+
+    from scripts import reinitialiser_mot_de_passe as reset
+
+    monkeypatch.setattr(sys, "argv", ["x", "ADMIN"])
+    monkeypatch.setattr(reset.getpass, "getpass", lambda _: "Nouveau#Admin2026")
+    assert reset.main() == 0
+    assert client.post("/api/auth/login", data={"username": "admin", "password": "Nouveau#Admin2026"}).status_code == 200

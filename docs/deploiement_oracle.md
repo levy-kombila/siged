@@ -22,6 +22,7 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
+* Lancez toujours uvicorn **depuis le dossier `backend`**. Depuis la racine, vous obtenez `No module named 'app'`.
 * Ouvrez http://localhost:8000, puis connectez-vous avec `admin` / `Admin@SIGED2026`.
 * Mode développement : base SQLite (`siged.db`) et fichiers chiffrés dans `backend\data\`. **Aucun `.env` n'est nécessaire.**
 * L'OCR et le PDF/A ne fonctionnent que si Tesseract, Ghostscript et LibreOffice sont installés sur Windows. Ce n'est pas indispensable : l'étape B les fournit.
@@ -69,6 +70,54 @@ docker compose logs -f api        # journal de l'API (Ctrl+C pour quitter)
 * Test complet : déposez un scan (photo d'une facture). Après quelques secondes, la fiche affiche « PDF/A-2b · OCR » et la recherche retrouve les mots de l'image.
 
 Arrêt : `docker compose down` (les données sont conservées dans des volumes Docker). Pour **tout effacer** : `docker compose down -v`.
+
+### B.3 Se connecter
+
+* Identifiant : `admin` (majuscules acceptées).
+* Mot de passe : la valeur de `SIGED_BOOTSTRAP_ADMIN_PASSWORD` **de votre `.env`**, et non `Admin@SIGED2026`, qui ne sert qu'en mode développement sans `.env`.
+* Ce mot de passe n'est appliqué **qu'à la création** du compte, au tout premier démarrage. Si la base existait déjà, réinitialisez-le :
+
+```powershell
+docker compose exec api python -m scripts.reinitialiser_mot_de_passe admin
+```
+
+### B.4 Supprimer l'avertissement « site dangereux » (facultatif)
+
+Caddy signe le certificat local avec sa propre autorité. Pour que Windows lui fasse confiance :
+
+```powershell
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .\caddy-root.crt
+Import-Certificate -FilePath .\caddy-root.crt -CertStoreLocation Cert:\CurrentUser\Root
+```
+
+Acceptez la fenêtre de confirmation, puis redémarrez le navigateur. Cette étape ne concerne que `localhost` : en ligne, le certificat Let's Encrypt est reconnu partout.
+
+### B.5 Accéder à la base avec pgAdmin, ou lancer uvicorn sur la base Docker
+
+La base PostgreSQL du conteneur est accessible **depuis votre PC uniquement**, sur le port **5433**. Le port 5432 reste ainsi libre pour le PostgreSQL installé sur Windows.
+
+**pgAdmin 4** → *Register → Server* :
+
+| Onglet | Champ | Valeur |
+|---|---|---|
+| General | Name | `SIGED (Docker)` |
+| Connection | Host | `localhost` |
+| | Port | `5433` |
+| | Maintenance database | `siged` |
+| | Username | `siged` (valeur de `POSTGRES_USER`) |
+| | Password | valeur de `POSTGRES_PASSWORD` de votre `.env` |
+
+**uvicorn en local sur la base Docker** (pour développer avec rechargement automatique). Utilisez une **base séparée**, `siged_dev`, pour ne pas mélanger les données de test avec celles de l'application Docker, qui a sa propre clé de chiffrement et stocke ses fichiers dans MinIO :
+
+```powershell
+docker compose exec postgres createdb -U siged siged_dev
+cd D:\Django\siged\backend                # uvicorn se lance TOUJOURS depuis backend
+.venv\Scripts\activate
+$env:SIGED_DATABASE_URL = "postgresql+psycopg://siged:VOTRE_POSTGRES_PASSWORD@localhost:5433/siged_dev"
+uvicorn app.main:app --reload
+```
+
+La variable `$env:` ne vaut que pour cette fenêtre PowerShell : aucun fichier n'est modifié. L'application est alors sur http://localhost:8000, avec `admin` / `Admin@SIGED2026`.
 
 ---
 
