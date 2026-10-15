@@ -62,6 +62,17 @@ services:
     depends_on: [api]
     restart: unless-stopped
 
+  tunnel:
+    # Mise en ligne gratuite DEPUIS VOTRE PC, sans compte ni carte bancaire :
+    # Cloudflare Quick Tunnel publie l'application sur une adresse https://xxxx.trycloudflare.com.
+    # Démarré uniquement avec le profil « public » : docker compose --profile public up -d
+    # (ou deploy/windows/en-ligne.ps1). Le site reste en ligne tant que le PC est allumé.
+    image: cloudflare/cloudflared:2026.9.3
+    command: tunnel --no-autoupdate --url http://api:8000
+    depends_on: [api]
+    restart: unless-stopped
+    profiles: ["public"]
+
   backup:
     image: postgres:16-alpine
     env_file: .env

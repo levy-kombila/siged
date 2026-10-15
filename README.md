@@ -42,7 +42,13 @@ docker compose up -d --build
 
 https://localhost (certificat local auto-signé : avertissement du navigateur normal).
 
-**C. En ligne, gratuitement** — VM **Oracle Cloud Always Free** (ARM, 2 cœurs, 12 Go) + domaine DuckDNS ; Caddy obtient le certificat Let's Encrypt automatiquement :
+**C bis. En ligne depuis votre PC, gratuitement, sans compte** — tunnel Cloudflare (toutes les fonctionnalités, adresse `https://….trycloudflare.com`, tant que le PC est allumé) : [docs/mise_en_ligne_pc.md](docs/mise_en_ligne_pc.md)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\windows\en-ligne.ps1
+```
+
+**C. En ligne 24 h/24, gratuitement** — VM **Oracle Cloud Always Free** (ARM, 2 cœurs, 12 Go) + domaine DuckDNS ; Caddy obtient le certificat Let's Encrypt automatiquement :
 
 ```bash
 bash deploy/oracle/installer.sh     # une fois : Docker, pare-feu, swap, mises à jour auto
