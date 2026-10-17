@@ -95,3 +95,10 @@ def test_qr_code(client, admin):
     assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml") and b"<svg" in r.content
     assert client.get("/api/scan/qr", headers=admin, params={"url": "javascript:alert(1)"}).status_code == 422
     assert client.get("/api/scan/qr", params={"url": "https://x.ga"}).status_code == 401
+
+
+def test_interface_is_never_served_stale(client):
+    r = client.get("/")
+    assert r.headers["cache-control"] == "no-cache"
+    assert '/static/app.js?v=' in r.text and '/static/style.css?v=' in r.text
+    assert client.get("/static/app.js").headers["cache-control"] == "no-cache"
