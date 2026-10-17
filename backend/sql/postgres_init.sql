@@ -35,3 +35,10 @@ $$;
 -- 4) Recommandation production : l'application se connecte avec un rôle
 --    qui n'a que INSERT/SELECT sur audit_logs :
 --    REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM siged_app;
+
+-- 5) Évolutions GEDarchive sur une base existante (create_all n'ajoute pas de colonnes)
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS valid_until DATE;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS shelf_location_id INTEGER REFERENCES shelf_locations(id);
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS physical_ref VARCHAR(100) NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS ix_documents_valid_until ON documents (valid_until);
+CREATE INDEX IF NOT EXISTS ix_documents_shelf_location_id ON documents (shelf_location_id);

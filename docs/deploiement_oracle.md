@@ -1,4 +1,8 @@
-# Mettre SIGED en ligne : du PC au serveur Oracle Cloud (gratuit)
+# Mettre GEDarchive en ligne 24 h/24 : serveur Oracle Cloud ou VPS
+
+> **Quel chemin choisir ?**
+> * **Pour une démonstration** : utilisez le tunnel Cloudflare depuis votre PC, gratuit et sans compte : [mise_en_ligne_pc.md](mise_en_ligne_pc.md). Limites : le PC doit rester allumé et l'adresse change à chaque lancement.
+> * **Pour un site disponible en permanence** : suivez ce guide. Les scripts `deploy/oracle/` fonctionnent sur une VM Oracle Cloud *Always Free* comme sur n'importe quel VPS Ubuntu payant (4 à 6 €/mois, 2 Go de RAM minimum) : seule l'étape de création de la machine diffère.
 
 Le parcours se fait en **trois étapes**, dans cet ordre. Chacune valide la précédente : si l'application marche à l'étape A, un problème à l'étape B vient de Docker, et un problème à l'étape C vient du serveur.
 

@@ -1,4 +1,4 @@
-"""Modèle de données SIGED (SQLAlchemy 2.0).
+"""Modèle de données GEDarchive (SQLAlchemy 2.0).
 
 Séparation stricte : cette base ne contient que métadonnées, index et traces ;
 les fichiers physiques sont dans l'Object Storage / système de fichiers chiffré.
@@ -105,6 +105,43 @@ class ClassificationNode(Base):
     parent: Mapped["ClassificationNode | None"] = relationship(back_populates="children", remote_side=[id])
 
 
+# ---------------------------------------------------------------- Rayonnage (archives physiques)
+class ShelfKind:
+    """Niveaux de localisation physique, du plus large au plus fin."""
+    SITE = "SITE"            # Site / bâtiment
+    SALLE = "SALLE"          # Salle / magasin d'archives
+    RAYONNAGE = "RAYONNAGE"  # Rayonnage (épi, armoire)
+    TRAVEE = "TRAVEE"        # Travée
+    TABLETTE = "TABLETTE"    # Tablette (étagère)
+    BOITE = "BOITE"          # Boîte / carton d'archives
+    ALL = [SITE, SALLE, RAYONNAGE, TRAVEE, TABLETTE, BOITE]
+
+
+class ShelfLocation(Base):
+    __tablename__ = "shelf_locations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True)       # ex : MAG1-R03-T2-B015
+    label: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(20), default=ShelfKind.BOITE)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("shelf_locations.id"), nullable=True)
+    capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)  # nb max de documents
+    description: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    children: Mapped[list["ShelfLocation"]] = relationship(back_populates="parent")
+    parent: Mapped["ShelfLocation | None"] = relationship(back_populates="children", remote_side=[id])
+
+    @property
+    def path(self) -> str:
+        """Chemin lisible : « Magasin 1 › Rayonnage R03 › Boîte 15 »."""
+        parts, node, seen = [], self, set()
+        while node is not None and node.id not in seen:
+            seen.add(node.id)
+            parts.append(node.label)
+            node = node.parent
+        return " › ".join(reversed(parts))
+
+
 # ---------------------------------------------------------------- Documents
 def compute_retention_until(d: date, years: int) -> date:
     try:
@@ -131,6 +168,11 @@ class Document(Base):
     status: Mapped[str] = mapped_column(String(30), default=DocStatus.DRAFT, index=True)
     retention_until: Mapped[date] = mapped_column(Date, index=True)  # document_date + DUA
     legal_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # gel (contentieux)
+    # Date à laquelle le document devient obsolète (fin de validité : contrat, attestation, agrément...)
+    valid_until: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    # Exemplaire papier : emplacement dans le rayonnage
+    shelf_location_id: Mapped[int | None] = mapped_column(ForeignKey("shelf_locations.id"), nullable=True, index=True)
+    physical_ref: Mapped[str] = mapped_column(String(100), default="")
     source: Mapped[str] = mapped_column(String(30), default="upload")  # upload|batch|api|hotfolder|email
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -140,6 +182,7 @@ class Document(Base):
 
     classification: Mapped[ClassificationNode | None] = relationship(lazy="joined")
     creator: Mapped[User | None] = relationship(lazy="joined")
+    shelf_location: Mapped[ShelfLocation | None] = relationship(lazy="joined")
     versions: Mapped[list["DocumentVersion"]] = relationship(
         back_populates="document", order_by="DocumentVersion.created_at", cascade="all, delete-orphan")
     extra_metadata: Mapped[list["DocumentMetadata"]] = relationship(cascade="all, delete-orphan")
@@ -256,3 +299,27 @@ class Sequence(Base):
     __tablename__ = "sequences"
     name: Mapped[str] = mapped_column(String(50), primary_key=True)
     value: Mapped[int] = mapped_column(Integer, default=0)
+
+
+# ---------------------------------------------------------------- Notifications
+class NotificationKind:
+    VALIDITY = "VALIDITY"    # fin de validité : le document devient obsolète
+    RETENTION = "RETENTION"  # DUA échue : sort final à appliquer
+    ALL = [VALIDITY, RETENTION]
+
+
+class Notification(Base):
+    """Alerte adressée à un utilisateur (une seule par document, type et palier)."""
+    __tablename__ = "notifications"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    stage: Mapped[str] = mapped_column(String(10))       # J-90, J-30, J-7, ECHU
+    due_date: Mapped[date] = mapped_column(Date)
+    title: Mapped[str] = mapped_column(String(255))
+    message: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "document_id", "kind", "stage", name="uq_notification_stage"),)

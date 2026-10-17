@@ -23,16 +23,17 @@ class Perm:
     USER_MANAGE = "user:manage"
     INTEGRATION_MANAGE = "integration:manage"
     ADMIN_JOBS = "admin:jobs"
+    SHELVING_MANAGE = "shelving:manage"
 
     ALL = [DOC_READ, DOC_WRITE, DOC_VALIDATE, DOC_DELETE, CLASSIFICATION_MANAGE,
-           RETENTION_MANAGE, AUDIT_READ, USER_MANAGE, INTEGRATION_MANAGE, ADMIN_JOBS]
+           RETENTION_MANAGE, AUDIT_READ, USER_MANAGE, INTEGRATION_MANAGE, ADMIN_JOBS, SHELVING_MANAGE]
 
 
 DEFAULT_ROLES: dict[str, tuple[str, list[str]]] = {
     "admin": ("Administrateur : tous les droits", Perm.ALL),
-    "archiviste": ("Gestion du plan de classement, de la DUA et de l'audit",
+    "archiviste": ("Gestion du plan de classement, du rayonnage, de la DUA et de l'audit",
                    [Perm.DOC_READ, Perm.DOC_WRITE, Perm.CLASSIFICATION_MANAGE,
-                    Perm.RETENTION_MANAGE, Perm.AUDIT_READ, Perm.ADMIN_JOBS]),
+                    Perm.RETENTION_MANAGE, Perm.AUDIT_READ, Perm.ADMIN_JOBS, Perm.SHELVING_MANAGE]),
     "validateur": ("Approuve ou rejette les documents soumis", [Perm.DOC_READ, Perm.DOC_VALIDATE]),
     "contributeur": ("Dépose et met à jour des documents", [Perm.DOC_READ, Perm.DOC_WRITE]),
     "lecteur": ("Consultation seule", [Perm.DOC_READ]),

@@ -63,7 +63,7 @@ def build_aip(db: Session, doc: Document) -> Path:
                                     "original_filename": v.original_filename} for v in doc.versions],
             "provenance_information": [{"at": e.created_at.isoformat(), "actor": e.actor, "action": e.action,
                                         "details": e.details, "entry_hash": e.entry_hash} for e in trail],
-            "package": {"generated_at": datetime.now(timezone.utc).isoformat(), "generator": "SIGED",
+            "package": {"generated_at": datetime.now(timezone.utc).isoformat(), "generator": "GEDarchive",
                         "standard": "ISO 14721 (OAIS) - AIP"},
         }
         z.writestr("metadata/description.json", json.dumps(description, ensure_ascii=False, indent=2, default=str))

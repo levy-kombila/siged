@@ -1,4 +1,4 @@
-"""Point d'entrée de l'API SIGED (FastAPI)."""
+"""Point d'entrée de l'API GEDarchive (FastAPI)."""
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import admin, auth, classification, cron, documents, search
+from app.api import admin, auth, classification, cron, documents, notifications, search, shelving
 from app.core.config import get_settings
 from app.core.database import get_engine, init_engine, initialize
 from app.services.documents import BusinessError
@@ -27,13 +27,13 @@ async def lifespan(_: FastAPI):
         raise RuntimeError("Configuration de production incomplète : " + " ; ".join(problems))
     init_engine()
     initialize()
-    logger.info("SIGED démarré (base : %s, stockage : %s)", get_engine().dialect.name, get_settings().storage_backend)
+    logger.info("GEDarchive démarré (base : %s, stockage : %s)", get_engine().dialect.name, get_settings().storage_backend)
     yield
 
 
 app = FastAPI(
-    title="SIGED API",
-    description="Système Intégré de Gestion Électronique des Documents et d'archivage "
+    title="GEDarchive API",
+    description="GEDarchive : gestion électronique des documents, archivage et rayonnage "
                 "(ISO 15489 / ISO 14721 OAIS). Authentification : JWT (Bearer) ou clé d'API (X-API-Key).",
     version="1.0.0",
     lifespan=lifespan,
@@ -60,8 +60,8 @@ async def business_error(_: Request, exc: BusinessError):
     return JSONResponse({"detail": exc.message, **exc.extra}, status_code=exc.status_code)
 
 
-for r in (auth.router, documents.router, search.router, classification.router, admin.router, admin.integrations,
-          cron.router):
+for r in (auth.router, shelving.doc_router, documents.router, search.router, classification.router, shelving.router,
+          notifications.router, notifications.deadlines, admin.router, admin.integrations, cron.router):
     app.include_router(r)
 
 

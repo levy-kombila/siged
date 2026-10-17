@@ -12,7 +12,7 @@ from app.core.security import Perm, generate_api_key
 from app.models import ApiKey, AuditLog, Document, DocumentVersion, IntegrityCheck, Role, Webhook
 from app.schemas import (ApiKeyCreated, ApiKeyIn, ApiKeyOut, AuditOut, DocumentOut, RetentionRunIn,
                          WebhookCreated, WebhookIn, WebhookOut)
-from app.services import audit, events, integrity, retention
+from app.services import audit, events, integrity, obsolescence, retention
 
 router = APIRouter(prefix="/api", tags=["Administration & conformité"])
 
@@ -87,7 +87,9 @@ def stats(db: Session = Depends(get_db), _: Principal = Depends(require(Perm.DOC
     conv = dict(db.execute(select(DocumentVersion.conversion_status, func.count())
                            .group_by(DocumentVersion.conversion_status)).all())
     return {"documents_by_status": by_status, "versions": volume[0], "bytes": int(volume[1]),
-            "conversion": conv, "retention_due": len(retention.due_documents(db))}
+            "conversion": conv, "retention_due": len(retention.due_documents(db)),
+            "obsolete_soon": len([i for i in obsolescence.upcoming(db, 30) if i["kind"] == "VALIDITY"]),
+            "shelved": db.execute(select(func.count(Document.id)).where(Document.shelf_location_id.is_not(None))).scalar_one()}
 
 
 # ------------------------------------------------------------------ Intégrations : clés d'API

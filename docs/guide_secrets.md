@@ -1,6 +1,13 @@
-# Guide des secrets et clés de SIGED
+# Guide des secrets et clés de GEDarchive (projet SIGED)
 
-Ce guide explique, variable par variable, **d'où vient chaque valeur** et **comment l'obtenir**. Toutes les valeurs vont dans le fichier **`.env`**, à la racine du projet : d'abord sur votre PC (Docker local), puis sur le serveur Oracle Cloud, avec **les mêmes valeurs** sauf `SIGED_DOMAIN`. Le parcours complet est décrit dans [deploiement_oracle.md](deploiement_oracle.md).
+Ce guide explique, variable par variable, **d'où vient chaque valeur** et **comment l'obtenir**. Toutes les valeurs vont dans le fichier **`.env`**, à la racine du projet. Deux chemins de mise en ligne utilisent ce même fichier :
+
+| Besoin | Chemin | Guide | `SIGED_DOMAIN` |
+|---|---|---|---|
+| **Démonstration** (gratuit, PC allumé, adresse qui change à chaque lancement) | Tunnel Cloudflare depuis votre PC | [mise_en_ligne_pc.md](mise_en_ligne_pc.md) | `localhost` (inchangé) |
+| **Site disponible 24 h/24** | Oracle Cloud ou VPS payant (4 à 6 €/mois) | [deploiement_oracle.md](deploiement_oracle.md) | votre nom de domaine |
+
+Sur un serveur, reprenez **les mêmes valeurs** que sur le PC, sauf `SIGED_DOMAIN`.
 
 > **Règles d'or**
 > 1. Le fichier `.env` ne doit **jamais** être envoyé sur GitHub (il est déjà exclu par `.gitignore`).
