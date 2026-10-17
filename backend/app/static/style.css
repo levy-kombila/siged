@@ -189,6 +189,31 @@ dl.meta dt { color: var(--muted); font-size: 13px; } dl.meta dd { margin: 0; }
   border-radius: 8px; opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; max-width: 420px; z-index: 50; }
 .toast.show { opacity: 1; transform: none; } .toast.err { background: var(--danger); }
 
+/* Numérisation */
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.tip { margin: 12px 0 0; font-size: 13px; }
+.cam { margin-top: 14px; }
+.cam video { width: 100%; max-height: 60vh; border-radius: 8px; background: #000; display: block; }
+.cam-bar { margin-top: 10px; }
+.crop { position: relative; margin: 14px auto; line-height: 0; background: #e8ebf5; border-radius: 8px; overflow: hidden;
+  width: fit-content; max-width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
+.crop img { max-width: 100%; max-height: 64vh; display: block; }
+.crop svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.crop .shade { fill: rgba(28, 34, 64, .55); }
+.crop .quad { fill: none; stroke: var(--rose); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
+.crop .handle { fill: #fff; stroke: var(--rose); stroke-width: 3px; vector-effect: non-scaling-stroke; cursor: grab; }
+.crop .handle:active { cursor: grabbing; fill: var(--rose-2); }
+.strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 6px; }
+.thumb { margin: 0; flex: none; width: 96px; cursor: pointer; text-align: center; }
+.thumb-img { height: 120px; display: grid; place-items: center; background: var(--line-2); border: 2px solid transparent; border-radius: 6px; overflow: hidden; }
+.thumb-img img { max-width: 100%; max-height: 100%; }
+.thumb.on .thumb-img { border-color: var(--rose); }
+.thumb figcaption { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.qr { display: grid; place-items: center; padding: 8px 0; min-height: 40px; }
+.qr img { width: 180px; height: 180px; }
+@media (pointer: coarse) { .qr-card { display: none; } }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpi:nth-child(4) { border-left: 0; } .kpi:nth-child(n+4) { border-top: 1px solid var(--line); } }
 @media (max-width: 860px) {

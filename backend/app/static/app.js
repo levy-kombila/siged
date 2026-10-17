@@ -13,7 +13,7 @@ const fmtDT = (d) => (d ? new Date(d).toLocaleString("fr-FR") : "—");
 const fmtSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko");
 const can = (p) => S.perms.includes(p);
 const KINDS = { SITE: "Site", SALLE: "Salle", RAYONNAGE: "Rayonnage", TRAVEE: "Travée", TABLETTE: "Tablette", BOITE: "Boîte" };
-const TITLES = { dashboard: "Tableau de bord", search: "Rechercher", upload: "Déposer", plan: "Plan de classement",
+const TITLES = { dashboard: "Tableau de bord", search: "Rechercher", upload: "Déposer", scan: "Numériser", plan: "Plan de classement",
   shelving: "Rayonnage", deadlines: "Échéances", compliance: "Conformité", integrations: "Interopérabilité" };
 const daysLeft = (d) => Math.round((new Date(d + "T00:00:00") - new Date(new Date().toDateString())) / 86400000);
 function dueChip(d) {
@@ -88,6 +88,7 @@ function go(view) {
   location.hash = view;
   document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === view));
   $("#page-title").textContent = TITLES[view] || "";
+  stopCamera();
   closeBell();
   $("#main").innerHTML = '<p class="muted">Chargement…</p>';
   VIEWS[view]().catch((e) => ($("#main").innerHTML = `<p class="error">${esc(e.message)}</p>`));
@@ -212,7 +213,8 @@ VIEWS.upload = async () => {
   const today = new Date().toISOString().slice(0, 10);
   $("#main").innerHTML = `
     <h1>Déposer des documents</h1>
-    <p class="lede">Remplissez la fiche une fois : elle s'applique à tous les fichiers déposés ensemble.</p>
+    <p class="lede">Remplissez la fiche une fois : elle s'applique à tous les fichiers déposés ensemble.
+      Un document papier à numériser ? <a data-go="scan">Utilisez l'appareil photo</a>.</p>
     <form id="uf" class="card grid">
       <h2>Fiche de métadonnées</h2>
       <div class="grid g2">
@@ -232,6 +234,7 @@ VIEWS.upload = async () => {
       <div class="row"><button class="btn primary">Déposer</button><span class="muted">Chaque fichier est scellé (SHA-256), chiffré et converti en PDF/A avec OCR.</span></div>
       <div id="up-res"></div>
     </form>`;
+  $("#main").querySelector('[data-go="scan"]').onclick = () => go("scan");
   $("#uf").onsubmit = async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -379,6 +382,260 @@ VIEWS.integrations = async () => {
     } catch (err) { toast(err.message, true); }
   };
 };
+
+/* ------------------------------------------------------------------ Numérisation */
+const SCAN = { pages: [], current: -1 };
+const MAX_EXPORT = 2400;   // côté long des photos envoyées (suffisant pour 300 ppp en A4 après recadrage)
+
+function stopCamera() {
+  if (S.stream) { S.stream.getTracks().forEach((t) => t.stop()); S.stream = null; }
+}
+const loadImage = (src) => new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error("Image illisible")); i.src = src; });
+
+/* Détection automatique de la feuille : plus grande zone claire de l'image (seuil d'Otsu),
+   coins = points extrêmes de cette zone. Retourne null si rien de plausible. */
+function detectCorners(src) {
+  const k = 180 / Math.max(src.naturalWidth || src.width, src.naturalHeight || src.height);
+  const w = Math.max(8, Math.round((src.naturalWidth || src.width) * k)), h = Math.max(8, Math.round((src.naturalHeight || src.height) * k));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.filter = "blur(1px)"; ctx.drawImage(src, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+  const g = new Uint8Array(w * h), hist = new Array(256).fill(0);
+  for (let i = 0; i < w * h; i++) { const v = (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) | 0; g[i] = v; hist[v]++; }
+  let sum = 0; hist.forEach((n, v) => (sum += n * v));
+  let sB = 0, wB = 0, best = 0, t = 128;
+  for (let v = 0; v < 256; v++) {
+    wB += hist[v]; if (!wB) continue; const wF = w * h - wB; if (!wF) break;
+    sB += v * hist[v]; const d = sB / wB - (sum - sB) / wF; const between = wB * wF * d * d;
+    if (between > best) { best = between; t = v; }
+  }
+  const seen = new Uint8Array(w * h); let bestComp = null;
+  for (let i = 0; i < w * h; i++) {
+    if (seen[i] || g[i] <= t) continue;
+    const stack = [i], comp = []; seen[i] = 1;
+    while (stack.length) {
+      const j = stack.pop(); comp.push(j); const x = j % w, y = (j / w) | 0;
+      for (const n of [x > 0 && j - 1, x < w - 1 && j + 1, y > 0 && j - w, y < h - 1 && j + w])
+        if (n !== false && !seen[n] && g[n] > t) { seen[n] = 1; stack.push(n); }
+    }
+    if (!bestComp || comp.length > bestComp.length) bestComp = comp;
+  }
+  if (!bestComp) return null;
+  const ratio = bestComp.length / (w * h);
+  if (ratio < 0.15 || ratio > 0.97) return null;
+  let tl, tr, br, bl;
+  for (const j of bestComp) {
+    const x = j % w + 0.5, y = ((j / w) | 0) + 0.5;
+    if (!tl || x + y < tl[0] + tl[1]) tl = [x, y];
+    if (!br || x + y > br[0] + br[1]) br = [x, y];
+    if (!tr || x - y > tr[0] - tr[1]) tr = [x, y];
+    if (!bl || x - y < bl[0] - bl[1]) bl = [x, y];
+  }
+  const q = [tl, tr, br, bl].map(([x, y]) => [x / w, y / h]);
+  return convex(q) ? q : null;
+}
+function convex(q) {
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const [a, b, c] = [q[i], q[(i + 1) % 4], q[(i + 2) % 4]];
+    const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (Math.abs(cr) < 1e-4) return false;
+    if (sign && Math.sign(cr) !== sign) return false; sign = Math.sign(cr);
+  }
+  return sign > 0;
+}
+const FULL = () => [[0, 0], [1, 0], [1, 1], [0, 1]];
+
+async function addPhoto(source) {
+  // source : File (photo / import) ou HTMLCanvasElement (caméra en direct)
+  let img = source, url;
+  if (source instanceof Blob) { url = URL.createObjectURL(source); img = await loadImage(url); }
+  const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+  const k = Math.min(1, MAX_EXPORT / Math.max(sw, sh));
+  const c = document.createElement("canvas"); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);   // orientation EXIF déjà appliquée par le navigateur
+  if (url) URL.revokeObjectURL(url);
+  const blob = await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.9));
+  const auto = detectCorners(c);
+  SCAN.pages.push({ blob, url: URL.createObjectURL(blob), w: c.width, h: c.height, corners: auto || FULL(), auto: !!auto, rotation: 0 });
+  SCAN.current = SCAN.pages.length - 1;
+}
+
+VIEWS.scan = async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const live = !!(navigator.mediaDevices?.getUserMedia && window.isSecureContext);
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  $("#main").innerHTML = `<h1>Numériser</h1>
+    <p class="lede">Photographiez chaque page avec le téléphone ou la webcam. GEDarchive repère la feuille, la redresse,
+      blanchit le fond puis assemble les pages en un seul PDF où le texte est reconnu et cherchable.</p>
+    <div class="grid split">
+      <div>
+        <div class="card">
+          <div class="row">
+            <label class="btn primary file-btn"><svg class="i"><use href="#i-camera"/></svg>Photographier une page
+              <input type="file" accept="image/*" capture="environment" id="snap"></label>
+            <label class="btn file-btn"><svg class="i"><use href="#i-upload"/></svg>Importer des photos
+              <input type="file" accept="image/*" multiple id="pick"></label>
+            ${live ? '<button class="btn" type="button" id="live">Caméra en direct</button>' : ""}
+          </div>
+          <div id="cam" class="cam hidden"><video id="video" playsinline muted></video>
+            <div class="row cam-bar"><button class="btn rose" type="button" id="shoot">Capturer la page</button>
+              <button class="btn" type="button" id="cam-close">Fermer la caméra</button></div></div>
+          <p class="muted tip">Posez la feuille à plat sur un fond plus sombre, bien éclairée : ses bords sont alors détectés automatiquement.</p>
+        </div>
+        <div class="card hidden" id="editor"></div>
+        <div class="card"><div class="row"><h2 style="margin:0">Pages</h2><span class="spacer"></span><span class="muted" id="pcount"></span></div>
+          <div id="strip" class="strip"></div></div>
+      </div>
+      <div class="sticky">
+        <form id="scf" class="card grid"><h2>Fiche du document</h2>
+          <label>Rendu
+            <select name="mode"><option value="document">Document : texte net, fond blanc</option>
+              <option value="gris">Niveaux de gris</option><option value="couleur">Couleur : photos, tampons</option></select></label>
+          <label>Titre *<input name="title" required></label>
+          <div class="grid g2"><label>Auteur *<input name="author" required value="${esc(S.name || "")}"></label>
+            <label>Date du document *<input type="date" name="document_date" value="${today}" required></label></div>
+          <div class="grid g2"><label>Type *<input name="doc_type" required placeholder="facture, courrier…"></label>
+            <label>Mots-clés *<input name="keywords" required placeholder="séparés par des virgules"></label></div>
+          <label>Rubrique<select name="classification_id">${planOptions()}</select></label>
+          <div class="grid g2"><label>DUA (années) <small>vide = rubrique</small><input type="number" min="0" max="200" name="dua_years"></label>
+            <label>Sort final<select name="final_disposition"><option value="">Hérité de la rubrique</option>
+              <option value="DESTROY">Destruction</option><option value="ARCHIVE">Archivage définitif</option></select></label></div>
+          <label>Fin de validité <small>facultatif</small><input type="date" name="valid_until"></label>
+          <button class="btn primary" id="scan-go" disabled>Ajoutez au moins une page</button>
+        </form>
+        <div class="card qr-card"><h2>Continuer sur le téléphone</h2>
+          <p class="muted">Visez ce code avec l'appareil photo du téléphone pour ouvrir cette page, puis connectez-vous.</p>
+          <div id="qr" class="qr"></div>
+          ${local ? `<p class="muted"><strong>${esc(location.host)}</strong> n'est joignable que depuis ce PC. Pour le téléphone,
+            mettez le site en ligne (tunnel) et ouvrez cette page par son adresse publique.</p>` : ""}</div>
+      </div>
+    </div>`;
+
+  const handleFiles = async (files) => {
+    for (const f of files) { try { await addPhoto(f); } catch (err) { toast(err.message, true); } }
+    renderScan();
+  };
+  $("#snap").onchange = (e) => { handleFiles([...e.target.files]); e.target.value = ""; };
+  $("#pick").onchange = (e) => { handleFiles([...e.target.files]); e.target.value = ""; };
+  if ($("#live")) $("#live").onclick = async () => {
+    try {
+      S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+      const v = $("#video"); v.srcObject = S.stream; await v.play();
+      $("#cam").classList.remove("hidden");
+    } catch (err) { toast("Caméra inaccessible : " + err.message, true); }
+  };
+  $("#shoot").onclick = async () => {
+    const v = $("#video"); if (!v.videoWidth) return;
+    const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d").drawImage(v, 0, 0);
+    await addPhoto(c); renderScan(); toast(`Page ${SCAN.pages.length} capturée`);
+  };
+  $("#cam-close").onclick = () => { stopCamera(); $("#cam").classList.add("hidden"); };
+  api(`/api/scan/qr?url=${encodeURIComponent(location.origin + "/#scan")}`, { raw: true })
+    .then(async (r) => { if (!$("#qr")) return; const u = URL.createObjectURL(await r.blob()); $("#qr").innerHTML = `<img src="${u}" alt="QR code vers la page Numériser">`; })
+    .catch(() => {});
+
+  $("#scf").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!SCAN.pages.length) return;
+    const f = new FormData(e.target);
+    const meta = { title: f.get("title"), author: f.get("author"), document_date: f.get("document_date"), doc_type: f.get("doc_type"),
+      keywords: f.get("keywords").split(",").map((k) => k.trim()).filter(Boolean), valid_until: f.get("valid_until") || null,
+      dua_years: f.get("dua_years") ? +f.get("dua_years") : null, final_disposition: f.get("final_disposition") || null,
+      classification_id: f.get("classification_id") ? +f.get("classification_id") : null };
+    const body = new FormData();
+    SCAN.pages.forEach((p, i) => body.append("pages", p.blob, `page-${i + 1}.jpg`));
+    body.append("metadata", JSON.stringify(meta));
+    body.append("options", JSON.stringify({ mode: f.get("mode"), pages: SCAN.pages.map((p) => ({ corners: p.corners, rotation: p.rotation })) }));
+    const btn = $("#scan-go"); btn.disabled = true; btn.textContent = "Création du PDF…";
+    try {
+      const d = await api("/api/scan", { method: "POST", body });
+      SCAN.pages.forEach((p) => URL.revokeObjectURL(p.url)); SCAN.pages = []; SCAN.current = -1;
+      toast(`Document ${d.reference} créé`); e.target.reset(); renderScan(); openDoc(d.id);
+    } catch (err) { toast(err.message, true); renderScan(); }
+  };
+  renderScan();
+};
+
+function renderScan() {
+  if (!$("#strip")) return;
+  const n = SCAN.pages.length;
+  $("#pcount").textContent = n ? `${n} page${n > 1 ? "s" : ""}` : "";
+  const btn = $("#scan-go");
+  btn.disabled = !n; btn.textContent = n ? `Créer le document (${n} page${n > 1 ? "s" : ""})` : "Ajoutez au moins une page";
+  $("#strip").innerHTML = n ? SCAN.pages.map((p, i) => `<figure class="thumb ${i === SCAN.current ? "on" : ""}" data-i="${i}">
+      <div class="thumb-img"><img src="${p.url}" alt="Page ${i + 1}" style="transform:rotate(${p.rotation}deg)"></div>
+      <figcaption>Page ${i + 1}</figcaption></figure>`).join("")
+    : '<p class="empty">Aucune page. Photographiez la première page du document.</p>';
+  $("#strip").querySelectorAll("[data-i]").forEach((el) => (el.onclick = () => { SCAN.current = +el.dataset.i; renderScan(); }));
+  renderEditor();
+}
+
+function renderEditor() {
+  const ed = $("#editor");
+  const p = SCAN.pages[SCAN.current];
+  if (!p) { ed.classList.add("hidden"); ed.innerHTML = ""; return; }
+  ed.classList.remove("hidden");
+  const i = SCAN.current, last = SCAN.pages.length - 1;
+  ed.innerHTML = `<div class="row"><h2 style="margin:0">Page ${i + 1}</h2>
+      <span class="muted">${p.auto ? "Bords détectés. Faites glisser un coin pour l'ajuster." : "Bords non détectés : placez les 4 coins sur ceux de la feuille."}</span></div>
+    <div class="crop"><img src="${p.url}" alt="Photo de la page ${i + 1}" draggable="false">
+      <svg viewBox="0 0 ${p.w} ${p.h}" preserveAspectRatio="none" id="crop-svg">
+        <path class="shade" fill-rule="evenodd" d=""></path><polygon class="quad" points=""></polygon>
+        ${p.corners.map((_, k) => `<circle class="handle" data-k="${k}"></circle>`).join("")}
+      </svg></div>
+    <div class="row">
+      <button class="btn sm" type="button" data-a="auto">Détecter les bords</button>
+      <button class="btn sm" type="button" data-a="full">Page entière</button>
+      <button class="btn sm" type="button" data-a="rl">Pivoter à gauche</button>
+      <button class="btn sm" type="button" data-a="rr">Pivoter à droite</button>
+      <span class="spacer"></span>
+      <button class="btn sm" type="button" data-a="left" ${i === 0 ? "disabled" : ""}>Placer avant</button>
+      <button class="btn sm" type="button" data-a="right" ${i === last ? "disabled" : ""}>Placer après</button>
+      <button class="btn sm danger" type="button" data-a="del">Supprimer la page</button></div>
+    ${p.rotation ? `<p class="muted">La page sera pivotée de ${p.rotation}° dans le PDF.</p>` : ""}`;
+  const svg = $("#crop-svg");
+  const draw = () => {
+    const pts = p.corners.map(([x, y]) => [x * p.w, y * p.h]);
+    svg.querySelector(".quad").setAttribute("points", pts.map((q) => q.join(",")).join(" "));
+    svg.querySelector(".shade").setAttribute("d", `M0 0H${p.w}V${p.h}H0Z M${pts.map((q) => q.join(" ")).join(" L")} Z`);
+    // Rayon fixe à l'écran (doigt : 16 px, souris : 10 px), quelle que soit la résolution de la photo
+    const scale = p.w / (svg.getBoundingClientRect().width || p.w);
+    const r = (matchMedia("(pointer: coarse)").matches ? 16 : 10) * scale;
+    svg.querySelectorAll(".handle").forEach((c) => { const [x, y] = pts[+c.dataset.k]; c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", r); });
+  };
+  draw();
+  $("#editor img").onload = draw;
+  svg.querySelectorAll(".handle").forEach((c) => {
+    c.onpointerdown = (e) => {
+      e.preventDefault(); c.setPointerCapture(e.pointerId);
+      const k = +c.dataset.k;
+      c.onpointermove = (ev) => {
+        const r = svg.getBoundingClientRect();
+        const nx = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), ny = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+        const next = p.corners.map((q, j) => (j === k ? [nx, ny] : q));
+        if (convex(next)) { p.corners = next; draw(); }
+      };
+      c.onpointerup = c.onpointercancel = () => { c.onpointermove = null; };
+    };
+  });
+  ed.querySelectorAll("[data-a]").forEach((b) => (b.onclick = async () => {
+    const a = b.dataset.a;
+    if (a === "full") p.corners = FULL();
+    else if (a === "auto") {
+      const found = detectCorners(await loadImage(p.url));
+      if (found) { p.corners = found; p.auto = true; } else toast("Feuille non détectée : placez les coins à la main", true);
+    } else if (a === "rl") p.rotation = (p.rotation + 270) % 360;
+    else if (a === "rr") p.rotation = (p.rotation + 90) % 360;
+    else if (a === "left" || a === "right") {
+      const j = a === "left" ? i - 1 : i + 1;
+      [SCAN.pages[i], SCAN.pages[j]] = [SCAN.pages[j], SCAN.pages[i]]; SCAN.current = j;
+    } else if (a === "del") { URL.revokeObjectURL(p.url); SCAN.pages.splice(i, 1); SCAN.current = Math.min(i, SCAN.pages.length - 1); }
+    renderScan();
+  }));
+}
 
 /* ------------------------------------------------------------------ Échéances */
 function deadlineList(items) {
