@@ -24,7 +24,7 @@ def seed(db: Session) -> None:
     if not db.execute(select(User.id).limit(1)).first():
         admin_role = db.execute(select(Role).where(Role.name == "admin")).scalar_one()
         db.add(User(username=s.bootstrap_admin_username, email=s.bootstrap_admin_email,
-                    full_name="Administrateur SIGED", hashed_password=hash_password(s.bootstrap_admin_password),
+                    full_name="Administrateur GEDarchive", hashed_password=hash_password(s.bootstrap_admin_password),
                     role_id=admin_role.id))
         db.commit()
         logger.warning("Compte administrateur initial créé (%s) : changez le mot de passe !",

@@ -138,7 +138,7 @@ def create_document(db: Session, actor: Actor, received: ReceivedFile, meta: Doc
     doc = Document(
         reference=next_reference(db), title=meta.title.strip(), author=meta.author.strip(),
         document_date=meta.document_date, doc_type=meta.doc_type.strip().lower(), keywords=meta.keywords,
-        dua_years=dua, final_disposition=disp, description=meta.description,
+        dua_years=dua, final_disposition=disp, description=meta.description, valid_until=meta.valid_until,
         retention_until=compute_retention_until(meta.document_date, dua),
         classification_id=node.id if node else None, status=DocStatus.DRAFT, source=source,
         created_by=actor.user_id,
@@ -229,7 +229,7 @@ def update_metadata(db: Session, actor: Actor, doc: Document, upd: DocumentMetaU
         if not db.get(ClassificationNode, data["classification_id"]):
             raise BusinessError("Rubrique du plan de classement introuvable", 422)
     for k, v in data.items():
-        if v is None and k not in ("classification_id",):
+        if v is None and k not in ("classification_id", "valid_until"):
             continue
         old = getattr(doc, k)
         if old != v:

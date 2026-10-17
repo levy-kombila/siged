@@ -1,8 +1,8 @@
 {
  "openapi": "3.1.0",
  "info": {
-  "title": "SIGED API",
-  "description": "Système Intégré de Gestion Électronique des Documents et d'archivage (ISO 15489 / ISO 14721 OAIS). Authentification : JWT (Bearer) ou clé d'API (X-API-Key).",
+  "title": "GEDarchive API",
+  "description": "GEDarchive : gestion électronique des documents, archivage et rayonnage (ISO 15489 / ISO 14721 OAIS). Authentification : JWT (Bearer) ou clé d'API (X-API-Key).",
   "version": "1.0.0"
  },
  "paths": {
@@ -215,6 +215,63 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/documents/{doc_id}/location": {
+   "put": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Ranger l'exemplaire papier (ou le retirer)",
+    "operationId": "set_location_api_documents__doc_id__location_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "doc_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Doc Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DocumentLocationIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DocumentOut"
         }
        }
       }
@@ -1847,6 +1904,483 @@
     }
    }
   },
+  "/api/shelving": {
+   "get": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Arborescence du rayonnage avec occupation",
+    "operationId": "tree_api_shelving_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Create",
+    "operationId": "create_api_shelving_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ShelfLocationIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ShelfLocationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/shelving/kinds": {
+   "get": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Niveaux de localisation disponibles",
+    "operationId": "kinds_api_shelving_kinds_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/shelving/flat": {
+   "get": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Flat",
+    "operationId": "flat_api_shelving_flat_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ShelfLocationOut"
+         },
+         "type": "array",
+         "title": "Response Flat Api Shelving Flat Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/shelving/{loc_id}": {
+   "put": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Update",
+    "operationId": "update_api_shelving__loc_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "loc_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Loc Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ShelfLocationIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ShelfLocationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Delete",
+    "operationId": "delete_api_shelving__loc_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "loc_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Loc Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/shelving/{loc_id}/documents": {
+   "get": {
+    "tags": [
+     "Rayonnage"
+    ],
+    "summary": "Documents rangés à cet emplacement",
+    "operationId": "documents_api_shelving__loc_id__documents_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "loc_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Loc Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/DocumentOut"
+         },
+         "title": "Response Documents Api Shelving  Loc Id  Documents Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/notifications": {
+   "get": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Mes notifications (les plus récentes d'abord)",
+    "operationId": "my_notifications_api_notifications_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "unread_only",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Unread Only"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 30,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NotificationList"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/notifications/{notif_id}/read": {
+   "post": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Marquer comme lue",
+    "operationId": "mark_read_api_notifications__notif_id__read_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "notif_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Notif Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NotificationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/notifications/read-all": {
+   "post": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Tout marquer comme lu",
+    "operationId": "mark_all_read_api_notifications_read_all_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/notifications/run": {
+   "post": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Générer maintenant les alertes d'obsolescence (sinon chaque matin)",
+    "operationId": "run_api_notifications_run_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/obsolescence/upcoming": {
+   "get": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Échéances à venir : fin de validité et fin de DUA (échues incluses)",
+    "operationId": "upcoming_api_obsolescence_upcoming_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 3650,
+       "minimum": 0,
+       "default": 90,
+       "title": "Days"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ObsolescenceItem"
+         },
+         "title": "Response Upcoming Api Obsolescence Upcoming Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/audit": {
    "get": {
     "tags": [
@@ -2470,6 +3004,47 @@
     }
    }
   },
+  "/api/cron/daily": {
+   "get": {
+    "tags": [
+     "Supervision"
+    ],
+    "summary": "Tâches quotidiennes : conversions, messagerie, intégrité, DUA",
+    "operationId": "daily_api_cron_daily_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "",
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/health": {
    "get": {
     "tags": [
@@ -3044,6 +3619,18 @@
       "format": "date",
       "title": "Retention Until"
      },
+     "valid_until": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valid Until"
+     },
      "description": {
       "type": "string",
       "title": "Description"
@@ -3055,6 +3642,21 @@
      "legal_hold": {
       "type": "boolean",
       "title": "Legal Hold"
+     },
+     "shelf_location": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ShelfLocationRef"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "physical_ref": {
+      "type": "string",
+      "title": "Physical Ref",
+      "default": ""
      },
      "source": {
       "type": "string",
@@ -3156,6 +3758,29 @@
     ],
     "title": "DocumentDetail"
    },
+   "DocumentLocationIn": {
+    "properties": {
+     "shelf_location_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Shelf Location Id"
+     },
+     "physical_ref": {
+      "type": "string",
+      "maxLength": 100,
+      "title": "Physical Ref",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "title": "DocumentLocationIn"
+   },
    "DocumentMetaUpdate": {
     "properties": {
      "title": {
@@ -3254,6 +3879,18 @@
       ],
       "title": "Description"
      },
+     "valid_until": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valid Until"
+     },
      "classification_id": {
       "anyOf": [
        {
@@ -3330,6 +3967,18 @@
       "format": "date",
       "title": "Retention Until"
      },
+     "valid_until": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valid Until"
+     },
      "description": {
       "type": "string",
       "title": "Description"
@@ -3341,6 +3990,21 @@
      "legal_hold": {
       "type": "boolean",
       "title": "Legal Hold"
+     },
+     "shelf_location": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ShelfLocationRef"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "physical_ref": {
+      "type": "string",
+      "title": "Physical Ref",
+      "default": ""
      },
      "source": {
       "type": "string",
@@ -3466,6 +4130,125 @@
     ],
     "title": "LegalHoldIn"
    },
+   "NotificationList": {
+    "properties": {
+     "unread": {
+      "type": "integer",
+      "title": "Unread"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/NotificationOut"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "unread",
+     "items"
+    ],
+    "title": "NotificationList"
+   },
+   "NotificationOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "document_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Id"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "stage": {
+      "type": "string",
+      "title": "Stage"
+     },
+     "due_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Due Date"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "read_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Read At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "document_id",
+     "kind",
+     "stage",
+     "due_date",
+     "title",
+     "message",
+     "created_at",
+     "read_at"
+    ],
+    "title": "NotificationOut"
+   },
+   "ObsolescenceItem": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "due_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Due Date"
+     },
+     "days_left": {
+      "type": "integer",
+      "title": "Days Left"
+     },
+     "document": {
+      "$ref": "#/components/schemas/DocumentOut"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "due_date",
+     "days_left",
+     "document"
+    ],
+    "title": "ObsolescenceItem"
+   },
    "RetentionRunIn": {
     "properties": {
      "document_ids": {
@@ -3569,6 +4352,18 @@
       "format": "date",
       "title": "Retention Until"
      },
+     "valid_until": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valid Until"
+     },
      "description": {
       "type": "string",
       "title": "Description"
@@ -3580,6 +4375,21 @@
      "legal_hold": {
       "type": "boolean",
       "title": "Legal Hold"
+     },
+     "shelf_location": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ShelfLocationRef"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "physical_ref": {
+      "type": "string",
+      "title": "Physical Ref",
+      "default": ""
      },
      "source": {
       "type": "string",
@@ -3730,6 +4540,157 @@
      "items"
     ],
     "title": "SearchResult"
+   },
+   "ShelfLocationIn": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Code"
+     },
+     "label": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Label"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind",
+      "default": "BOITE"
+     },
+     "parent_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Parent Id"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 100000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "label"
+    ],
+    "title": "ShelfLocationIn"
+   },
+   "ShelfLocationOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "path": {
+      "type": "string",
+      "title": "Path"
+     },
+     "parent_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Parent Id"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "code",
+     "label",
+     "kind",
+     "path",
+     "parent_id",
+     "capacity",
+     "description"
+    ],
+    "title": "ShelfLocationOut"
+   },
+   "ShelfLocationRef": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "path": {
+      "type": "string",
+      "title": "Path"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "code",
+     "label",
+     "kind",
+     "path"
+    ],
+    "title": "ShelfLocationRef"
    },
    "SuggestIn": {
     "properties": {

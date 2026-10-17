@@ -12,7 +12,7 @@ DEFAULT_SECRET = "change-me-in-production-please-32chars-min"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SIGED_", env_file=".env", extra="ignore")
 
-    app_name: str = "SIGED - Système Intégré de Gestion Électronique des Documents"
+    app_name: str = "GEDarchive - Gestion électronique des documents et archivage"
     environment: str = "dev"  # dev | test | prod
     # Plateforme serverless (Vercel) : détectée automatiquement par la variable VERCEL
     serverless: bool = Field(default_factory=lambda: bool(os.getenv("VERCEL")))
@@ -50,6 +50,8 @@ class Settings(BaseSettings):
 
     # --- Conservation (DUA) ---
     retention_auto_execute: bool = False  # False = bordereau à confirmer par l'archiviste
+    # Alertes d'obsolescence : paliers en jours avant l'échéance (0 = le jour même / échu)
+    obsolescence_alert_days: str = "90,30,7,0"
 
     # --- Interopérabilité ---
     smtp_host: str = ""

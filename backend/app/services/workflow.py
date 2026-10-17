@@ -63,11 +63,11 @@ def _notify(db: Session, action: str, doc: Document, by: str, comment: str) -> N
     if action == "submit":
         to = db.execute(select(User.email).join(Role).where(User.is_active.is_(True), Role.name.in_(
             ["validateur", "admin"]))).scalars().all()
-        events.send_email(list(to), f"[SIGED] À valider : {doc.reference} - {doc.title}",
+        events.send_email(list(to), f"[GEDarchive] À valider : {doc.reference} - {doc.title}",
                           f"{by} a soumis le document {doc.reference} « {doc.title} » à validation.")
     elif doc.creator and doc.creator.email:
         verdict = "validé" if action == "approve" else "rejeté"
-        events.send_email([doc.creator.email], f"[SIGED] Document {verdict} : {doc.reference}",
+        events.send_email([doc.creator.email], f"[GEDarchive] Document {verdict} : {doc.reference}",
                           f"Votre document « {doc.title} » a été {verdict} par {by}.\n{comment}")
 
 

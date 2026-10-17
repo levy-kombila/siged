@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.models import ConversionStatus, DocumentVersion
-from app.services import integrity, retention
+from app.services import integrity, obsolescence, retention
 from app.services.audit import Actor
 from app.services.documents import process_version
 
@@ -34,6 +34,11 @@ def run_retention() -> dict:
                 "archive": len(rep["archived"]), "errors": len(rep["errors"])}
 
 
+def run_obsolescence() -> dict:
+    with SessionLocal() as db:
+        return obsolescence.run_alerts(db, WORKER)
+
+
 def retry_conversions(limit: int = 50) -> dict:
     with SessionLocal() as db:
         ids = db.execute(select(DocumentVersion.id).where(
@@ -55,7 +60,7 @@ def daily() -> dict:
     """Enchaînement quotidien ; chaque étape est isolée pour qu'un échec n'empêche pas les autres."""
     report = {}
     for name, fn in (("conversions", retry_conversions), ("mail", run_mail),
-                     ("integrity", run_integrity), ("retention", run_retention)):
+                     ("integrity", run_integrity), ("retention", run_retention), ("obsolescence", run_obsolescence)):
         try:
             report[name] = fn()
         except Exception as exc:  # noqa: BLE001

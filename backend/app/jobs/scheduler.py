@@ -7,6 +7,7 @@
   * 01:30 chaque nuit   : reprise des conversions PDF/A en échec ou en attente
   * 02:00 chaque nuit   : contrôle d'intégrité SHA-256 de tous les fichiers
   * 03:00 chaque nuit   : DUA -> bordereau d'élimination / versement (exécution si auto)
+  * 07:00 chaque matin  : alertes d'obsolescence (fin de validité, fin de DUA)
 """
 import logging
 
@@ -36,7 +37,8 @@ def main():
     sched.add_job(tasks.retry_conversions, "cron", hour=1, minute=30, id="retry_conversions")
     sched.add_job(tasks.run_integrity, "cron", hour=2, minute=0, id="integrity")
     sched.add_job(tasks.run_retention, "cron", hour=3, minute=0, id="retention")
-    logger.info("Worker SIGED démarré : %s", [j.id for j in sched.get_jobs()])
+    sched.add_job(tasks.run_obsolescence, "cron", hour=7, minute=0, id="obsolescence")
+    logger.info("Worker GEDarchive démarré : %s", [j.id for j in sched.get_jobs()])
     sched.start()
 
 

@@ -19,7 +19,7 @@ def test_process_time_header(client, admin):
 
 def test_frontend_served(client):
     r = client.get("/")
-    assert r.status_code == 200 and "SIGED" in r.text
+    assert r.status_code == 200 and "GEDarchive" in r.text
     assert client.get("/static/app.js").status_code == 200
 
 

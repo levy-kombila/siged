@@ -3,40 +3,82 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SIGED — Gestion électronique des documents</title>
+  <meta name="theme-color" content="#1c2b6b">
+  <title>GEDarchive — Gestion électronique des documents et archivage</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <!-- Icônes (sprite SVG, réutilisées par <use>) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24"><path d="M4 4h6v5H4zM14 15h6v5h-6zM14 4h6v5h-6zM7 9v8h7M7 6.5h7"/></symbol>
+    <symbol id="i-shelf" viewBox="0 0 24 24"><path d="M3 21h18M3 3v18M21 3v18M3 12h18M6 12V6h4v6M12 12V7h3v5M6 21v-6h4v6M13 21v-5h4v5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0zM12 17v5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l-5-5 5-5M5 12h11"/></symbol>
+  </svg>
+
   <!-- Connexion -->
   <section id="login-view" class="login hidden">
-    <form id="login-form" class="login-card">
-      <div class="brand"><span class="brand-mark">S</span><div><strong>SIGED</strong><small>Gestion électronique des documents &amp; archivage</small></div></div>
-      <label>Identifiant<input name="username" autocomplete="username" required></label>
-      <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
-      <button class="btn primary" type="submit">Se connecter</button>
-      <p id="login-error" class="error"></p>
-    </form>
+    <div class="login-side">
+      <div class="brand"><span class="brand-mark"></span><div><strong>GED<span>archive</span></strong></div></div>
+      <div>
+        <h1>Vos archives, papier et numériques, au même endroit.</h1>
+        <p>Déposez, classez et retrouvez vos documents. GEDarchive vous indique où se trouve chaque dossier papier et vous prévient avant qu'un document ne devienne obsolète.</p>
+      </div>
+      <div class="login-shelf" aria-hidden="true">
+        <i style="height:70px"></i><i style="height:92px"></i><i style="height:80px"></i><i style="height:96px"></i><i style="height:74px"></i><i style="height:88px"></i>
+      </div>
+    </div>
+    <div class="login-main">
+      <form id="login-form" class="login-card">
+        <h2>Connexion</h2>
+        <label>Identifiant<input name="username" autocomplete="username" required></label>
+        <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="btn primary" type="submit">Se connecter</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+    </div>
   </section>
 
   <!-- Application -->
   <div id="app" class="hidden">
     <aside class="sidebar">
-      <div class="brand"><span class="brand-mark">S</span><div><strong>SIGED</strong><small id="who"></small></div></div>
+      <div class="brand"><span class="brand-mark"></span><div><strong>GED<span>archive</span></strong><small>Documents &amp; archives</small></div></div>
       <nav id="nav">
-        <a data-view="dashboard">Tableau de bord</a>
-        <a data-view="search">Rechercher</a>
-        <a data-view="upload" data-perm="document:write">Déposer</a>
-        <a data-view="plan">Plan de classement</a>
-        <a data-view="compliance" data-perm="audit:read">Conformité</a>
-        <a data-view="integrations" data-perm="integration:manage">Interopérabilité</a>
+        <a data-view="dashboard"><svg class="i"><use href="#i-home"/></svg>Tableau de bord</a>
+        <a data-view="search"><svg class="i"><use href="#i-search"/></svg>Rechercher</a>
+        <a data-view="upload" data-perm="document:write"><svg class="i"><use href="#i-upload"/></svg>Déposer</a>
+        <a data-view="plan"><svg class="i"><use href="#i-tree"/></svg>Plan de classement</a>
+        <a data-view="shelving"><svg class="i"><use href="#i-shelf"/></svg>Rayonnage</a>
+        <a data-view="deadlines"><svg class="i"><use href="#i-clock"/></svg>Échéances</a>
+        <a data-view="compliance" data-perm="audit:read"><svg class="i"><use href="#i-shield"/></svg>Conformité</a>
+        <a data-view="integrations" data-perm="integration:manage"><svg class="i"><use href="#i-plug"/></svg>Interopérabilité</a>
       </nav>
-      <button id="logout" class="btn ghost">Déconnexion</button>
+      <button id="logout" class="btn ghost"><svg class="i"><use href="#i-out"/></svg>Se déconnecter</button>
     </aside>
-    <main id="main"></main>
+    <div class="content">
+      <header class="topbar">
+        <span class="title" id="page-title"></span>
+        <span class="spacer"></span>
+        <div class="bell" id="bell">
+          <button type="button" id="bell-btn" aria-label="Notifications" aria-expanded="false"><svg class="i"><use href="#i-bell"/></svg></button>
+          <span class="count hidden" id="bell-count"></span>
+          <div class="notif-panel hidden" id="notif-panel"></div>
+        </div>
+        <div class="user-chip"><span class="avatar" id="avatar"></span><span id="who"></span></div>
+      </header>
+      <main id="main"></main>
+    </div>
   </div>
 
   <dialog id="doc-dialog"><div id="doc-panel"></div></dialog>
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>

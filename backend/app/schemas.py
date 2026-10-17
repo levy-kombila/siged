@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.models import FinalDisposition
+from app.models import FinalDisposition, ShelfKind
 
 
 class ORM(BaseModel):
@@ -81,6 +81,42 @@ class ClassificationOut(ORM):
     rule_keywords: list[str]
 
 
+# ------------------------------------------------------------- Rayonnage
+class ShelfLocationIn(BaseModel):
+    code: str = Field(min_length=1, max_length=50)
+    label: str = Field(min_length=1, max_length=255)
+    kind: str = ShelfKind.BOITE
+    parent_id: int | None = None
+    capacity: int | None = Field(default=None, ge=1, le=100000)
+    description: str = ""
+
+    @field_validator("kind")
+    @classmethod
+    def _kind(cls, v):
+        if v not in ShelfKind.ALL:
+            raise ValueError("Niveau : " + ", ".join(ShelfKind.ALL))
+        return v
+
+
+class ShelfLocationRef(ORM):
+    id: int
+    code: str
+    label: str
+    kind: str
+    path: str
+
+
+class ShelfLocationOut(ShelfLocationRef):
+    parent_id: int | None
+    capacity: int | None
+    description: str
+
+
+class DocumentLocationIn(BaseModel):
+    shelf_location_id: int | None = None
+    physical_ref: str = Field(default="", max_length=100)
+
+
 # ------------------------------------------------------------- Documents
 class DocumentMetaIn(BaseModel):
     """Fiche de métadonnées. Champs obligatoires : titre, auteur, date, type, mots-clés, DUA
@@ -93,6 +129,7 @@ class DocumentMetaIn(BaseModel):
     dua_years: int | None = Field(default=None, ge=0, le=200)
     final_disposition: str | None = None
     description: str = ""
+    valid_until: date | None = None
     classification_id: int | None = None
     classification_code: str | None = None
     extra_metadata: dict[str, str] = {}
@@ -122,6 +159,7 @@ class DocumentMetaUpdate(BaseModel):
     dua_years: int | None = Field(default=None, ge=0, le=200)
     final_disposition: str | None = None
     description: str | None = None
+    valid_until: date | None = None
     classification_id: int | None = None
     extra_metadata: dict[str, str] | None = None
 
@@ -156,9 +194,12 @@ class DocumentOut(ORM):
     dua_years: int
     final_disposition: str
     retention_until: date
+    valid_until: date | None = None
     description: str
     status: str
     legal_hold: bool
+    shelf_location: ShelfLocationRef | None = None
+    physical_ref: str = ""
     source: str
     classification: ClassificationOut | None
     created_at: datetime
@@ -264,3 +305,29 @@ class WebhookOut(ORM):
 
 class WebhookCreated(WebhookOut):
     secret: str
+
+
+# ------------------------------------------------------------- Notifications
+class NotificationOut(ORM):
+    id: int
+    document_id: str | None
+    kind: str
+    stage: str
+    due_date: date
+    title: str
+    message: str
+    created_at: datetime
+    read_at: datetime | None
+
+
+class NotificationList(BaseModel):
+    unread: int
+    items: list[NotificationOut]
+
+
+class ObsolescenceItem(BaseModel):
+    kind: str            # VALIDITY | RETENTION
+    due_date: date
+    days_left: int       # négatif = déjà échu
+    document: "DocumentOut"
+

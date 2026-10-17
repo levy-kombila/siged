@@ -1,4 +1,6 @@
-# SIGED — Système Intégré de Gestion Électronique des Documents
+# GEDarchive — Gestion électronique des documents et archivage
+
+*(nom de code du dépôt : SIGED ; les variables d'environnement gardent le préfixe `SIGED_`)*
 
 GED + archivage électronique (SAE) conforme aux principes **ISO 15489** et **ISO 14721 (OAIS)**.
 Backend **Python / FastAPI**, PostgreSQL, MinIO (S3), OCRmyPDF/Tesseract/LibreOffice, interface web incluse.
@@ -13,13 +15,16 @@ Backend **Python / FastAPI**, PostgreSQL, MinIO (S3), OCRmyPDF/Tesseract/LibreOf
 | Recherche | 13 critères + plein texte avec extraits surlignés, tri, pagination |
 | Consultation | Aperçu en ligne (pages en images, PDF inline), téléchargement original/PDF/A |
 | Versions & workflow | v1.0 → v1.1 → v2.0, historique immuable ; brouillon → en validation → validé (figé), rejet motivé, séparation des tâches |
-| Sécurité | JWT, RBAC (5 rôles, 10 permissions), verrouillage de compte, AES-256-GCM au repos, TLS 1.3 |
+| Rayonnage | Localisation des exemplaires papier (site › salle › rayonnage › travée › tablette › boîte), capacité et remplissage des boîtes, contenu de chaque emplacement |
+| Échéances | Date de fin de validité par document ; alertes d'obsolescence et de fin de DUA à J-90, J-30, J-7 et le jour même (cloche + e-mail), réglables par `SIGED_OBSOLESCENCE_ALERT_DAYS` |
+| Sécurité | JWT, RBAC (5 rôles, 11 permissions), verrouillage de compte, AES-256-GCM au repos, TLS 1.3 |
 | Conformité | Empreintes SHA-256 + contrôle nocturne, journal d'audit chaîné inaltérable, DUA / sort final / gel juridique, export AIP (BagIt) |
 | Interopérabilité | OpenAPI (`/docs`), clés d'API, webhooks signés HMAC, notifications e-mail |
 
 ## Mise en route : local → Docker → en ligne
 
-Guide complet pas à pas : **[docs/deploiement_oracle.md](docs/deploiement_oracle.md)**.
+* Démonstration gratuite depuis votre PC (tunnel Cloudflare) : **[docs/mise_en_ligne_pc.md](docs/mise_en_ligne_pc.md)**.
+* Site disponible 24 h/24 (Oracle Cloud ou VPS) : **[docs/deploiement_oracle.md](docs/deploiement_oracle.md)**.
 
 **A. Local (développement, sans Docker)** — Python 3.11+ :
 

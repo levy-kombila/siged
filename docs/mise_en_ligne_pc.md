@@ -1,4 +1,4 @@
-# Mettre SIGED en ligne depuis votre PC (gratuit, sans compte, sans carte)
+# Mettre GEDarchive en ligne depuis votre PC (démonstration gratuite, sans compte, sans carte)
 
 SIGED tourne déjà sur votre PC avec Docker (https://localhost). Un **tunnel Cloudflare** rend cette même application accessible depuis Internet, sur une adresse sécurisée du type :
 
@@ -61,7 +61,7 @@ L'application reste disponible pour vous sur https://localhost. Un simple `docke
 * **Mot de passe administrateur** robuste (celui que vous avez réinitialisé). Créez des comptes `lecteur` ou `contributeur` pour les personnes qui testent, plutôt que de partager `admin`.
 * **Données** : n'y mettez que des documents de démonstration (`python -m scripts.demo_data --url https://VOTRE-ADRESSE.trycloudflare.com --password "…"` depuis `backend`).
 * **Mise en veille** : désactivez-la pendant une démonstration (*Paramètres Windows → Système → Alimentation → Écran et veille → Jamais*), sinon le site se coupe.
-* **Taille des fichiers** : Cloudflare limite chaque envoi à 100 Mo.
+* **Taille des fichiers** : la documentation de Cloudflare fixe à **100 Mo** la taille maximale d'un envoi pour les offres Free et Pro ([erreur 413](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/4xx-client-error/error-413)). Elle ne précise pas de limite propre aux Quick Tunnels : considérez 100 Mo comme le plafond probable et testez un gros fichier avant la démonstration. Au-delà, l'envoi échoue avec une erreur 413 (la limite propre de l'application est `SIGED_MAX_UPLOAD_MB`, 200 Mo par défaut).
 * Le journal d'audit (*Conformité*) enregistre toutes les connexions et consultations, avec l'adresse IP des visiteurs.
 
 ## 5. Dépannage
