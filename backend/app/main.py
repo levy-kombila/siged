@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import admin, auth, classification, cron, documents, notifications, search, shelving
+from app.api import admin, auth, classification, cron, documents, notifications, scan, search, shelving
 from app.core.config import get_settings
 from app.core.database import get_engine, init_engine, initialize
 from app.services.documents import BusinessError
@@ -49,6 +49,8 @@ async def perf_and_security(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
+    # Caméra autorisée pour ce site seulement (page Numériser) ; micro et position refusés
+    response.headers.setdefault("Permissions-Policy", "camera=(self), microphone=(), geolocation=()")
     if ms > get_settings().slow_request_ms and request.url.path.startswith("/api"):
         logger.warning("Requête lente (%.0f ms > %s ms) : %s %s", ms, get_settings().slow_request_ms,
                        request.method, request.url.path)
@@ -60,7 +62,7 @@ async def business_error(_: Request, exc: BusinessError):
     return JSONResponse({"detail": exc.message, **exc.extra}, status_code=exc.status_code)
 
 
-for r in (auth.router, shelving.doc_router, documents.router, search.router, classification.router, shelving.router,
+for r in (auth.router, scan.router, shelving.doc_router, documents.router, search.router, classification.router, shelving.router,
           notifications.router, notifications.deadlines, admin.router, admin.integrations, cron.router):
     app.include_router(r)
 

@@ -232,6 +232,98 @@
     }
    }
   },
+  "/api/scan": {
+   "post": {
+    "tags": [
+     "Numérisation"
+    ],
+    "summary": "Numériser : assembler des photos de pages en un document PDF",
+    "operationId": "create_scan_api_scan_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_create_scan_api_scan_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DocumentOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/scan/qr": {
+   "get": {
+    "tags": [
+     "Numérisation"
+    ],
+    "summary": "QR code (SVG) pour ouvrir la page Numériser sur un téléphone",
+    "operationId": "qr_code_api_scan_qr_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "maxLength": 500,
+       "title": "Url"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/documents/{doc_id}/location": {
    "put": {
     "tags": [
@@ -3315,6 +3407,36 @@
      "files"
     ],
     "title": "Body_batch_upload_api_documents_batch_post"
+   },
+   "Body_create_scan_api_scan_post": {
+    "properties": {
+     "pages": {
+      "items": {
+       "type": "string",
+       "contentMediaType": "application/octet-stream"
+      },
+      "type": "array",
+      "title": "Pages",
+      "description": "Photos des pages, dans l'ordre"
+     },
+     "metadata": {
+      "type": "string",
+      "title": "Metadata",
+      "description": "Fiche de métadonnées (JSON), comme pour un dépôt"
+     },
+     "options": {
+      "type": "string",
+      "title": "Options",
+      "description": "{\"mode\": \"document|gris|couleur\", \"pages\": [{\"corners\": [[x,y]x4] normalisés ou null, \"rotation\": 0}]}",
+      "default": "{}"
+     }
+    },
+    "type": "object",
+    "required": [
+     "pages",
+     "metadata"
+    ],
+    "title": "Body_create_scan_api_scan_post"
    },
    "Body_login_api_auth_login_post": {
     "properties": {
