@@ -1,11 +1,12 @@
 """Point d'entrée de l'API GEDarchive (FastAPI)."""
+import hashlib
 import logging
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -47,6 +48,8 @@ async def perf_and_security(request: Request, call_next):
     ms = (time.perf_counter() - t0) * 1000
     response.headers["X-Process-Time-ms"] = f"{ms:.1f}"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    if request.url.path.startswith("/static/"):
+        response.headers.setdefault("Cache-Control", "no-cache")  # revalidation (304) à chaque chargement
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     # Caméra autorisée pour ce site seulement (page Numériser) ; micro et position refusés
@@ -87,7 +90,15 @@ def health():
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
+# Version des fichiers de l'interface : empreinte de leur contenu. Ajoutée aux liens de index.html,
+# elle oblige le navigateur à recharger app.js / style.css après chaque mise à jour.
+ASSET_VERSION = hashlib.sha256(b"".join(
+    (STATIC / f).read_bytes() for f in ("app.js", "style.css", "index.html"))).hexdigest()[:12]
+
 
 @app.get("/", include_in_schema=False)
 def index():
-    return FileResponse(STATIC / "index.html")
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    for asset in ("/static/app.js", "/static/style.css"):
+        html = html.replace(f'"{asset}"', f'"{asset}?v={ASSET_VERSION}"')
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})

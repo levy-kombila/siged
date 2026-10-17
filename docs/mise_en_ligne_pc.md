@@ -73,6 +73,9 @@ L'application reste disponible pour vous sur https://localhost. Un simple `docke
 | L'adresse ne répond plus | Le PC s'est mis en veille ou a redémarré : relancez le script (une **nouvelle** adresse est attribuée) |
 | Erreur 502 sur l'adresse publique | L'API démarre encore : attendez 30 s ; sinon `docker compose logs api` |
 | Erreur 429 | Plus de 200 requêtes simultanées : limite des tunnels gratuits, réessayez |
+| Téléphone : « serveur introuvable » / « site inaccessible » | Le téléphone a demandé l'adresse avant sa publication et garde la réponse « introuvable » en cache. Attendez que le script affiche **« GEDarchive est en ligne »**, puis passez le téléphone en mode avion 10 s et réessayez. Si cela persiste, désactivez le *DNS privé* (Android : Paramètres → Réseau → DNS privé) ou le bloqueur de publicités |
+| `Le tunnel n'arrive pas à se connecter` | Le réseau bloque le port 7844 utilisé par Cloudflare : essayez un autre réseau (partage de connexion du téléphone par exemple) |
+| Une page récente (ex. *Numériser*) ramène au tableau de bord | Ancienne interface en cache : `Ctrl + F5` une fois. Depuis le sprint 9, l'application force le rechargement après chaque mise à jour |
 
 ## 6. Comment ça marche (pour le rapport)
 
