@@ -35,15 +35,24 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 
 /* Connexion */
 .login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); background: var(--card); }
-.login-side { background: var(--navy); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
-.login-side h1 { font-size: 40px; line-height: 1.1; max-width: 13ch; margin: 0; }
-.login-side p { max-width: 42ch; color: #c9cfee; margin: 14px 0 0; font-size: 15px; }
-.login-shelf { display: flex; align-items: flex-end; gap: 6px; border-bottom: 6px solid #3a4b9b; padding: 0 8px; max-width: 420px; }
-.login-shelf i { display: block; width: 46px; border-radius: 3px 3px 0 0; background: #3150c9; border-top: 8px solid var(--rose); }
-.login-shelf i:nth-child(2n) { background: #2a43a8; } .login-shelf i:nth-child(3n) { border-top-color: #f19bbb; }
+.login-side { position: relative; overflow: hidden; color: #fff; padding: 56px; display: flex; flex-direction: column; gap: 40px;
+  background: var(--navy) url("/static/img/connexion.svg") center bottom / cover no-repeat; }
+/* Voile en haut : le texte reste lisible sur l'illustration */
+.login-side::before { content: ""; position: absolute; inset: 0 0 auto; height: 72%; pointer-events: none;
+  background: linear-gradient(#1c2b6b 0%, #1c2b6b 62%, rgba(28, 43, 107, 0) 100%); }
+.login-side > * { position: relative; }
+.login-side h1 { font-size: 40px; line-height: 1.1; max-width: 14ch; margin: 0; }
+.login-side p { max-width: 42ch; color: #d3d8f2; margin: 14px 0 0; font-size: 15px; }
 .login-main { display: grid; place-items: center; padding: 24px; }
 .login-card { width: min(380px, 100%); display: grid; gap: 16px; }
 .login-card h2 { font-size: 22px; margin: 0; }
+.login-card > label[for] { margin-bottom: -10px; }
+.pwd { position: relative; }
+.pwd input { padding-right: 46px; }
+.pwd-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0;
+  border-radius: 6px; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.pwd-toggle:hover, .pwd-toggle[aria-pressed="true"] { color: var(--blue); background: var(--blue-2); }
+.caps { margin: -6px 0 0; font-size: 12px; font-weight: 600; color: var(--warn); }
 
 /* Mise en page */
 #app { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; }
@@ -217,7 +226,7 @@ dl.meta dt { color: var(--muted); font-size: 13px; } dl.meta dd { margin: 0; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpi:nth-child(4) { border-left: 0; } .kpi:nth-child(n+4) { border-top: 1px solid var(--line); } }
 @media (max-width: 860px) {
-  .login { grid-template-columns: 1fr; } .login-side { padding: 28px 20px; } .login-side h1 { font-size: 30px; }
+  .login { grid-template-columns: 1fr; } .login-side { padding: 28px 20px 220px; } .login-side h1 { font-size: 30px; } .login-side::before { height: 75%; }
   #app { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: static; height: auto; padding: 14px 16px; gap: 12px; }
   .sidebar .brand { padding: 0; }
