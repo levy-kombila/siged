@@ -12,7 +12,13 @@ Write-Host "Démarrage de GEDarchive et du tunnel public (reconstruction de l'im
 docker compose --profile public up -d --build
 if ($LASTEXITCODE -ne 0) { Write-Host "Échec de docker compose (Docker Desktop est-il lancé ?)" -ForegroundColor Red; exit 1 }
 
-function TunnelLogs { (docker compose --profile public logs --no-log-prefix tunnel 2>&1 | Out-String) }
+# Tunnel recréé à neuf : un conteneur seulement arrêté garde ses anciens journaux, et donc
+# l'adresse de la session précédente (devenue invalide). On ne lit que les journaux de ce lancement.
+$since = (Get-Date).ToUniversalTime().AddSeconds(-2).ToString("yyyy-MM-ddTHH:mm:ssZ")
+docker compose --profile public up -d --force-recreate --no-deps tunnel
+if ($LASTEXITCODE -ne 0) { Write-Host "Impossible de démarrer le tunnel" -ForegroundColor Red; exit 1 }
+
+function TunnelLogs { (docker compose --profile public logs --no-log-prefix --since $since tunnel 2>&1 | Out-String) }
 
 # 1) Adresse publique (la plus récente des journaux du tunnel)
 Write-Host "1/3 Attente de l'adresse publique (jusqu'à 60 s)..."
@@ -47,8 +53,12 @@ if (-not $connected) {
 Write-Host "3/3 Vérification depuis Internet..."
 $resolved = $false
 for ($i = 0; $i -lt 30 -and -not $resolved; $i++) {
-    try { $null = Resolve-DnsName -Name $hostName -Server 1.1.1.1 -DnsOnly -Type A -ErrorAction Stop; $resolved = $true }
-    catch { Start-Sleep -Seconds 2 }
+    foreach ($dns in "1.1.1.1", "8.8.8.8") {
+        if (-not $resolved) {
+            try { $null = Resolve-DnsName -Name $hostName -Server $dns -DnsOnly -Type A -ErrorAction Stop; $resolved = $true } catch { }
+        }
+    }
+    if (-not $resolved) { Start-Sleep -Seconds 2 }
 }
 $healthy = $false
 if ($resolved) {
