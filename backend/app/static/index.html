@@ -17,6 +17,7 @@
     <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></symbol>
     <symbol id="i-tree" viewBox="0 0 24 24"><path d="M4 4h6v5H4zM14 15h6v5h-6zM14 4h6v5h-6zM7 9v8h7M7 6.5h7"/></symbol>
     <symbol id="i-shelf" viewBox="0 0 24 24"><path d="M3 21h18M3 3v18M21 3v18M3 12h18M6 12V6h4v6M12 12V7h3v5M6 21v-6h4v6M13 21v-5h4v5"/></symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
@@ -65,6 +66,7 @@
         <a data-view="shelving"><svg class="i"><use href="#i-shelf"/></svg>Rayonnage</a>
         <a data-view="deadlines"><svg class="i"><use href="#i-clock"/></svg>Échéances</a>
         <a data-view="compliance" data-perm="audit:read"><svg class="i"><use href="#i-shield"/></svg>Conformité</a>
+        <a data-view="users" data-perm="user:manage"><svg class="i"><use href="#i-users"/></svg>Utilisateurs</a>
         <a data-view="integrations" data-perm="integration:manage"><svg class="i"><use href="#i-plug"/></svg>Interopérabilité</a>
       </nav>
       <button id="logout" class="btn ghost"><svg class="i"><use href="#i-out"/></svg>Se déconnecter</button>
@@ -78,12 +80,31 @@
           <span class="count hidden" id="bell-count"></span>
           <div class="notif-panel hidden" id="notif-panel"></div>
         </div>
-        <div class="user-chip"><span class="avatar" id="avatar"></span><span id="who"></span></div>
+        <button type="button" class="user-chip" id="account-btn" title="Mon compte"><span class="avatar" id="avatar"></span><span id="who"></span></button>
       </header>
       <main id="main"></main>
     </div>
   </div>
 
+  <dialog id="account-dialog" class="small-dialog">
+    <form id="pwf" class="grid" style="padding:24px">
+      <div class="row"><h2 style="margin:0">Mon compte</h2><span class="spacer"></span>
+        <button type="button" class="btn ghost" id="account-close">Fermer</button></div>
+      <p class="muted" id="account-info" style="margin:0"></p>
+      <h3 style="margin:8px 0 0">Changer mon mot de passe</h3>
+      <label for="pw-current">Mot de passe actuel</label>
+      <div class="pwd"><input id="pw-current" name="current_password" type="password" autocomplete="current-password" required>
+        <button type="button" class="pwd-toggle" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="i"><use href="#i-eye"/></svg></button></div>
+      <label for="pw-new">Nouveau mot de passe <small>10 caractères minimum, avec 3 types parmi : minuscules, majuscules, chiffres, symboles</small></label>
+      <div class="pwd"><input id="pw-new" name="new_password" type="password" autocomplete="new-password" required minlength="10">
+        <button type="button" class="pwd-toggle" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="i"><use href="#i-eye"/></svg></button></div>
+      <label for="pw-confirm">Confirmer le nouveau mot de passe</label>
+      <div class="pwd"><input id="pw-confirm" name="confirm" type="password" autocomplete="new-password" required>
+        <button type="button" class="pwd-toggle" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="i"><use href="#i-eye"/></svg></button></div>
+      <p class="error" id="pw-error" role="alert"></p>
+      <button class="btn primary">Changer le mot de passe</button>
+    </form>
+  </dialog>
   <dialog id="doc-dialog"><div id="doc-panel"></div></dialog>
   <div id="toast" class="toast" role="status"></div>
   <script src="/static/app.js"></script>

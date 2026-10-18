@@ -49,6 +49,12 @@ class UserOut(ORM):
     is_active: bool
     role: RoleOut
     created_at: datetime
+    locked_until: datetime | None = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 
 # ------------------------------------------------------------- Plan de classement

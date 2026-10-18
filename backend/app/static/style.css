@@ -71,7 +71,14 @@ svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
 .topbar { display: flex; align-items: center; gap: 12px; padding: 14px 32px; background: var(--card); border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 5; }
 .topbar .title { font: 600 15px var(--display); color: var(--ink-2); }
-.user-chip { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.user-chip { display: flex; align-items: center; gap: 10px; font: inherit; font-size: 13px; color: var(--ink-2);
+  border: 0; background: none; padding: 4px 8px 4px 4px; border-radius: 99px; cursor: pointer; }
+.user-chip:hover { background: var(--line-2); color: var(--ink); }
+dialog.small-dialog { width: min(480px, 94vw); }
+.form-pwd > label[for], .grid > label[for] { margin-bottom: -8px; }
+.pill-off { background: var(--line-2); color: var(--muted); }
+.pill-lock { background: var(--warn-bg); color: var(--warn); }
+.role-list dt { font-weight: 600; } .role-list dd { margin: 0 0 10px; color: var(--ink-2); }
 .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--rose-2); color: var(--rose); display: grid; place-items: center; font-weight: 700; }
 main { padding: 28px 32px 48px; max-width: 1240px; width: 100%; }
 .lede { color: var(--ink-2); margin: -4px 0 20px; max-width: 70ch; }
@@ -106,7 +113,7 @@ label { display: grid; gap: 5px; font-size: 13px; color: var(--ink-2); font-weig
 label small { font-weight: 400; color: var(--muted); }
 input, select, textarea { font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); width: 100%; }
 input:focus, select:focus, textarea:focus { outline: 3px solid var(--blue-2); border-color: var(--blue); }
-.btn { font: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line);
+.btn { white-space: nowrap; font: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line);
   background: #fff; color: var(--ink); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .btn:hover { border-color: var(--blue); color: var(--blue); }
 .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
