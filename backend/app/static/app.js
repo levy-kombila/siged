@@ -74,12 +74,28 @@ $("#login-form").addEventListener("submit", async (e) => {
   $("#login-error").textContent = "";
   try {
     const t = await api("/api/auth/login", { method: "POST", body: new URLSearchParams(new FormData(e.target)) });
+    if ($("#login-password").type === "text") $("#pwd-toggle").click();   // ne pas laisser le mot de passe visible
     S.token = t.access_token;
     sessionStorage.setItem("siged_token", S.token);
     boot();
   } catch (err) { $("#login-error").textContent = err.message; }
 });
 $("#logout").onclick = logout;
+
+/* Mot de passe : afficher / masquer (repasse en masqué à l'envoi) et avertissement Verr. Maj */
+$("#pwd-toggle").onclick = () => {
+  const input = $("#login-password"), btn = $("#pwd-toggle");
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  btn.setAttribute("aria-pressed", String(show));
+  btn.setAttribute("aria-label", show ? "Masquer le mot de passe" : "Afficher le mot de passe");
+  btn.title = btn.getAttribute("aria-label");
+  btn.querySelector("use").setAttribute("href", show ? "#i-eye-off" : "#i-eye");
+  input.focus();
+};
+["keydown", "keyup"].forEach((ev) => $("#login-password").addEventListener(ev, (e) => {
+  if (e.getModifierState) $("#caps").classList.toggle("hidden", !e.getModifierState("CapsLock"));
+}));
 $("#nav").addEventListener("click", (e) => { const a = e.target.closest("a[data-view]"); if (a) go(a.dataset.view); });
 
 const VIEWS = {};
