@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.deps import Principal, client_info, get_principal, require
 from app.core.security import Perm, check_password_policy, create_access_token, hash_password, verify_password
 from app.models import Role, User
-from app.schemas import RoleOut, Token, UserCreate, UserOut, UserUpdate
+from app.schemas import PasswordChange, RoleOut, Token, UserCreate, UserOut, UserUpdate
 from app.services import audit
 from app.services.audit import Actor
 
@@ -54,6 +54,23 @@ def me(p: Principal = Depends(get_principal)):
             "user": UserOut.model_validate(p.user).model_dump() if p.user else None}
 
 
+@router.post("/auth/password", status_code=204, summary="Changer son propre mot de passe")
+def change_password(data: PasswordChange, db: Session = Depends(get_db), p: Principal = Depends(get_principal)):
+    if not p.user:
+        raise HTTPException(400, "Réservé aux comptes utilisateurs (pas aux clés d'API)")
+    user = db.get(User, p.user.id)
+    if not verify_password(data.current_password, user.hashed_password):
+        audit.log(db, p.actor, "PASSWORD_CHANGE_FAILED", "user", str(user.id))
+        raise HTTPException(422, "Mot de passe actuel incorrect")
+    if data.new_password == data.current_password:
+        raise HTTPException(422, "Le nouveau mot de passe doit être différent de l'actuel")
+    if err := check_password_policy(data.new_password):
+        raise HTTPException(422, err)
+    user.hashed_password = hash_password(data.new_password)
+    audit.log(db, p.actor, "PASSWORD_CHANGE", "user", str(user.id), commit=False)
+    db.commit()
+
+
 @router.get("/roles", response_model=list[RoleOut])
 def list_roles(db: Session = Depends(get_db), _: Principal = Depends(get_principal)):
     return db.execute(select(Role).order_by(Role.id)).scalars().all()
@@ -93,6 +110,15 @@ def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db),
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(404, "Utilisateur introuvable")
+    is_self = p.user_id == user.id
+    removes_admin = (data.is_active is False) or (data.role is not None and data.role != "admin")
+    if is_self and removes_admin:
+        raise HTTPException(409, "Vous ne pouvez pas désactiver votre propre compte ni retirer votre rôle administrateur")
+    if removes_admin and user.role.name == "admin" and user.is_active:
+        admins = db.execute(select(func.count(User.id)).join(Role).where(
+            Role.name == "admin", User.is_active.is_(True))).scalar_one()
+        if admins <= 1:
+            raise HTTPException(409, "Il doit rester au moins un administrateur actif")
     changes = {}
     if data.full_name is not None:
         user.full_name = data.full_name
@@ -108,6 +134,11 @@ def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db),
             raise HTTPException(422, err)
         user.hashed_password = hash_password(data.password)
         changes["password"] = "modifié"
+    if data.is_active or data.password:  # réactivation ou nouveau mot de passe : déverrouille le compte
+        if user.locked_until or user.failed_logins:
+            changes["unlocked"] = True
+        user.locked_until = None
+        user.failed_logins = 0
     audit.log(db, p.actor, "USER_UPDATE", "user", str(user.id), changes, commit=False)
     db.commit()
     db.refresh(user)

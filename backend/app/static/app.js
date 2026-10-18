@@ -14,7 +14,7 @@ const fmtSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.ma
 const can = (p) => S.perms.includes(p);
 const KINDS = { SITE: "Site", SALLE: "Salle", RAYONNAGE: "Rayonnage", TRAVEE: "Travée", TABLETTE: "Tablette", BOITE: "Boîte" };
 const TITLES = { dashboard: "Tableau de bord", search: "Rechercher", upload: "Déposer", scan: "Numériser", plan: "Plan de classement",
-  shelving: "Rayonnage", deadlines: "Échéances", compliance: "Conformité", integrations: "Interopérabilité" };
+  users: "Utilisateurs", shelving: "Rayonnage", deadlines: "Échéances", compliance: "Conformité", integrations: "Interopérabilité" };
 const daysLeft = (d) => Math.round((new Date(d + "T00:00:00") - new Date(new Date().toDateString())) / 86400000);
 function dueChip(d) {
   if (!d) return "";
@@ -74,7 +74,7 @@ $("#login-form").addEventListener("submit", async (e) => {
   $("#login-error").textContent = "";
   try {
     const t = await api("/api/auth/login", { method: "POST", body: new URLSearchParams(new FormData(e.target)) });
-    if ($("#login-password").type === "text") $("#pwd-toggle").click();   // ne pas laisser le mot de passe visible
+    hideAllPasswords($("#login-form")); e.target.reset();   // ne pas laisser le mot de passe visible ni rempli
     S.token = t.access_token;
     sessionStorage.setItem("siged_token", S.token);
     boot();
@@ -83,15 +83,51 @@ $("#login-form").addEventListener("submit", async (e) => {
 $("#logout").onclick = logout;
 
 /* Mot de passe : afficher / masquer (repasse en masqué à l'envoi) et avertissement Verr. Maj */
-$("#pwd-toggle").onclick = () => {
-  const input = $("#login-password"), btn = $("#pwd-toggle");
-  const show = input.type === "password";
+function setPwdVisible(btn, show) {
+  const input = btn.parentElement.querySelector("input");
   input.type = show ? "text" : "password";
   btn.setAttribute("aria-pressed", String(show));
   btn.setAttribute("aria-label", show ? "Masquer le mot de passe" : "Afficher le mot de passe");
   btn.title = btn.getAttribute("aria-label");
   btn.querySelector("use").setAttribute("href", show ? "#i-eye-off" : "#i-eye");
-  input.focus();
+}
+// Tous les champs mot de passe (connexion, Mon compte, Utilisateurs) : bouton œil générique
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".pwd-toggle");
+  if (!btn) return;
+  setPwdVisible(btn, btn.getAttribute("aria-pressed") !== "true");
+  btn.parentElement.querySelector("input").focus();
+});
+const hideAllPasswords = (root = document) => root.querySelectorAll('.pwd-toggle[aria-pressed="true"]').forEach((b) => setPwdVisible(b, false));
+const pwdField = (name, label, auto = "new-password", extra = "") => `<label for="f-${name}">${label}</label>
+  <div class="pwd"><input id="f-${name}" name="${name}" type="password" autocomplete="${auto}" ${extra}>
+  <button type="button" class="pwd-toggle" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="i"><use href="#i-eye"/></svg></button></div>`;
+function strongPassword() {
+  const sets = ["ABCDEFGHJKLMNPQRSTUVWXYZ", "abcdefghijkmnopqrstuvwxyz", "23456789", "#@%+=?!*"];
+  const rnd = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n;
+  const chars = sets.map((x) => x[rnd(x.length)]);
+  const all = sets.join("");
+  while (chars.length < 14) chars.push(all[rnd(all.length)]);
+  for (let i = chars.length - 1; i > 0; i--) { const j = rnd(i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+  return chars.join("");
+}
+
+/* Mon compte : changement de mot de passe */
+$("#account-btn").onclick = () => {
+  $("#pwf").reset(); $("#pw-error").textContent = ""; hideAllPasswords($("#pwf"));
+  $("#account-info").textContent = `${S.name} · profil ${S.role}`;
+  $("#account-dialog").showModal();
+};
+$("#account-close").onclick = () => $("#account-dialog").close();
+$("#pwf").onsubmit = async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  $("#pw-error").textContent = "";
+  if (f.get("new_password") !== f.get("confirm")) { $("#pw-error").textContent = "Les deux nouveaux mots de passe ne sont pas identiques."; return; }
+  try {
+    await api("/api/auth/password", { method: "POST", json: { current_password: f.get("current_password"), new_password: f.get("new_password") } });
+    hideAllPasswords($("#pwf")); $("#account-dialog").close(); toast("Mot de passe changé");
+  } catch (err) { $("#pw-error").textContent = err.message; }
 };
 ["keydown", "keyup"].forEach((ev) => $("#login-password").addEventListener(ev, (e) => {
   if (e.getModifierState) $("#caps").classList.toggle("hidden", !e.getModifierState("CapsLock"));
@@ -358,6 +394,79 @@ VIEWS.compliance = async () => {
   $("#audit").innerHTML = `<table><thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Objet</th><th>IP</th></tr></thead><tbody>
     ${logs.map((l) => `<tr><td>${fmtDT(l.created_at)}</td><td>${esc(l.actor)}</td><td><span class="badge">${esc(l.action)}</span></td>
       <td class="mono">${esc(l.object_type)} ${esc(l.object_id || "")}</td><td class="mono">${esc(l.ip_address)}</td></tr>`).join("")}</tbody></table>`;
+};
+
+/* ------------------------------------------------------------------ Utilisateurs */
+VIEWS.users = async () => {
+  const [users, roles, me] = await Promise.all([api("/api/users"), api("/api/roles"), api("/api/auth/me")]);
+  const myId = me.user?.id;
+  const ROLE_LABEL = { admin: "Administrateur", archiviste: "Archiviste", validateur: "Validateur", contributeur: "Contributeur", lecteur: "Lecteur" };
+  const roleName = (r) => ROLE_LABEL[r] || r;
+  const locked = (u) => u.locked_until && new Date(u.locked_until) > new Date();
+  const state = (u) => !u.is_active ? '<span class="badge pill-off">Désactivé</span>'
+    : locked(u) ? `<span class="badge pill-lock" title="Trop d'échecs de connexion">Verrouillé jusqu'à ${new Date(u.locked_until).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>`
+    : '<span class="badge VALIDATED">Actif</span>';
+  $("#main").innerHTML = `<h1>Utilisateurs</h1>
+    <p class="lede">Créez les comptes, attribuez un profil et désactivez un compte quand une personne quitte le service.
+      Un compte n'est jamais supprimé : son historique reste dans le journal d'audit.</p>
+    <div class="grid split">
+      <div class="card"><div class="row"><h2 style="margin:0">${users.length} compte${users.length > 1 ? "s" : ""}</h2><span class="spacer"></span>
+          <input id="ufilter" placeholder="Filtrer par nom ou identifiant" style="max-width:260px"></div>
+        <table style="margin-top:12px"><thead><tr><th>Utilisateur</th><th>Profil</th><th>État</th><th></th></tr></thead><tbody>
+        ${users.map((u) => `<tr data-u="${u.id}" data-s="${esc((u.full_name + " " + u.username + " " + u.email).toLowerCase())}">
+          <td><strong>${esc(u.full_name || u.username)}</strong>${u.id === myId ? ' <span class="muted">(vous)</span>' : ""}
+            <div class="muted">${esc(u.username)} · ${esc(u.email)}</div></td>
+          <td><select data-role="${u.id}" ${u.id === myId ? "disabled" : ""} aria-label="Profil de ${esc(u.username)}" style="width:auto">
+            ${roles.map((r) => `<option value="${esc(r.name)}" ${r.name === u.role.name ? "selected" : ""}>${esc(roleName(r.name))}</option>`).join("")}</select></td>
+          <td>${state(u)}</td>
+          <td><div class="row" style="justify-content:flex-end">
+            <button class="btn sm" data-reset="${u.id}">Nouveau mot de passe</button>
+            ${u.id === myId ? "" : u.is_active
+              ? `<button class="btn sm danger" data-active="${u.id}" data-v="false">Désactiver</button>`
+              : `<button class="btn sm" data-active="${u.id}" data-v="true">Réactiver</button>`}
+            ${u.is_active && locked(u) ? `<button class="btn sm" data-active="${u.id}" data-v="true">Déverrouiller</button>` : ""}</div></td></tr>`).join("")}
+        </tbody></table></div>
+      <div class="sticky">
+        <form id="nuf" class="card grid" autocomplete="off"><h2>Nouveau compte</h2>
+          <div class="grid g2"><label>Identifiant *<input name="username" required pattern="[a-zA-Z0-9_.\-]{3,80}" placeholder="j.mba"></label>
+            <label>Profil<select name="role">${roles.map((r) => `<option value="${esc(r.name)}" ${r.name === "contributeur" ? "selected" : ""}>${esc(roleName(r.name))}</option>`).join("")}</select></label></div>
+          <label>Nom complet<input name="full_name" placeholder="Jeanne Mba"></label>
+          <label>E-mail *<input type="email" name="email" required></label>
+          ${pwdField("password", "Mot de passe initial *", "new-password", 'required minlength="10"')}
+          <div class="row"><button type="button" class="btn sm" id="genpw">Générer un mot de passe sûr</button>
+            <span class="muted">Communiquez-le à la personne, qui le changera dans « Mon compte ».</span></div>
+          <button class="btn primary">Créer le compte</button></form>
+        <div class="card"><h2>Profils</h2><dl class="role-list">${roles.map((r) => `<dt>${esc(roleName(r.name))}</dt><dd>${esc(r.description)}</dd>`).join("")}</dl></div>
+      </div>
+    </div>`;
+  const patch = async (id, body, msg) => {
+    try { await api(`/api/users/${id}`, { method: "PATCH", json: body }); toast(msg); VIEWS.users(); }
+    catch (err) { toast(err.message, true); VIEWS.users(); }
+  };
+  $("#ufilter").oninput = (e) => { const q = e.target.value.trim().toLowerCase();
+    $("#main").querySelectorAll("tr[data-s]").forEach((tr) => tr.classList.toggle("hidden", !!q && !tr.dataset.s.includes(q))); };
+  $("#main").querySelectorAll("[data-role]").forEach((sel) => (sel.onchange = () => patch(sel.dataset.role, { role: sel.value }, "Profil modifié")));
+  $("#main").querySelectorAll("[data-active]").forEach((b) => (b.onclick = () => {
+    const on = b.dataset.v === "true";
+    if (!on && !confirm("Désactiver ce compte ? La personne ne pourra plus se connecter.")) return;
+    patch(b.dataset.active, { is_active: on }, on ? "Compte réactivé et déverrouillé" : "Compte désactivé");
+  }));
+  $("#main").querySelectorAll("[data-reset]").forEach((b) => (b.onclick = async () => {
+    const pw = strongPassword();
+    if (!confirm(`Remplacer le mot de passe par :\n\n${pw}\n\nNotez-le avant de valider : il ne sera plus affiché.`)) return;
+    try { await api(`/api/users/${b.dataset.reset}`, { method: "PATCH", json: { password: pw } }); toast("Mot de passe remplacé"); VIEWS.users(); }
+    catch (err) { toast(err.message, true); }
+  }));
+  $("#genpw").onclick = () => {
+    const input = $("#f-password"); input.value = strongPassword();
+    setPwdVisible($("#nuf .pwd-toggle"), true);
+  };
+  $("#nuf").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    try { const u = await api("/api/users", { method: "POST", json: f }); toast(`Compte ${u.username} créé`); VIEWS.users(); }
+    catch (err) { toast(err.message, true); }
+  };
 };
 
 /* ------------------------------------------------------------------ Interopérabilité */

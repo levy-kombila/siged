@@ -18,6 +18,7 @@ Backend **Python / FastAPI**, PostgreSQL, MinIO (S3), OCRmyPDF/Tesseract/LibreOf
 | Numérisation | Page *Numériser* : photo au téléphone ou à la webcam, détection des bords de la feuille, redressement, fond blanchi, pages multiples assemblées en PDF, QR code pour passer du PC au téléphone ([docs/numerisation.md](docs/numerisation.md)) |
 | Rayonnage | Localisation des exemplaires papier (site › salle › rayonnage › travée › tablette › boîte), capacité et remplissage des boîtes, contenu de chaque emplacement |
 | Échéances | Date de fin de validité par document ; alertes d'obsolescence et de fin de DUA à J-90, J-30, J-7 et le jour même (cloche + e-mail), réglables par `SIGED_OBSOLESCENCE_ALERT_DAYS` |
+| Utilisateurs | Écran de gestion des comptes (création, profil, désactivation, déverrouillage, mot de passe généré), « Mon compte » pour changer son mot de passe, protection du dernier administrateur |
 | Sécurité | JWT, RBAC (5 rôles, 11 permissions), verrouillage de compte, AES-256-GCM au repos, TLS 1.3 |
 | Conformité | Empreintes SHA-256 + contrôle nocturne, journal d'audit chaîné inaltérable, DUA / sort final / gel juridique, export AIP (BagIt) |
 | Interopérabilité | OpenAPI (`/docs`), clés d'API, webhooks signés HMAC, notifications e-mail |
